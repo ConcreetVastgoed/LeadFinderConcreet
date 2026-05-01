@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lasten</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{--bg:#FAF6F1;--surface:#FFF;--surface2:#F5F0E8;--surface3:#EDE7DC;--border:#E0D6C8;--border-hover:#C8BBAA;--text:#2C2418;--text-dim:#7A6E5D;--text-muted:#A89F91;--accent:#B8763E;--accent-dim:#A5683A;--accent-light:rgba(184,118,62,.1);--green:#5A8A5E;--red:#C45D4A;--red-bg:rgba(196,93,74,.08);--orange:#C9882C;--zakelijk:#6B7FA0;--zakelijk-bg:rgba(107,127,160,.08);--radius:12px;--radius-sm:8px;--shadow:0 2px 12px rgba(44,36,24,.06);--shadow-lg:0 8px 32px rgba(44,36,24,.1)}
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.app{display:flex;min-height:100vh}
+.sidebar{width:250px;background:var(--surface);border-right:1px solid var(--border);padding:28px 0;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:10;box-shadow:2px 0 12px rgba(44,36,24,.04)}
+.sidebar-logo{padding:0 24px;margin-bottom:36px;display:flex;align-items:center;gap:12px}
+.sidebar-logo .icon{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),#D4985A);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:700;font-family:'Source Serif 4',serif}
+.sidebar-logo span{font-family:'Source Serif 4',serif;font-size:20px;font-weight:700}
+.nav-section{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:16px 24px 8px}
+.nav-item{padding:10px 24px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text-dim);transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--text);background:var(--accent-light);border-left-color:var(--accent);font-weight:600}
+.nav-item .badge{margin-left:auto;background:var(--accent);color:#fff;font-size:11px;padding:1px 8px;border-radius:10px;font-weight:600}
+.sidebar-footer{margin-top:auto;padding:18px 24px;border-top:1px solid var(--border)}
+.sidebar-footer .sl{font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px}
+.sidebar-footer .sl strong{color:var(--text-dim)}
+.main{flex:1;margin-left:250px;padding:36px 40px;max-width:1200px}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.ph h1{font-family:'Source Serif 4',serif;font-size:26px;font-weight:700;letter-spacing:-.5px}
+.ph .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--border-hover);background:var(--surface2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-dim)}
+.btn-sm{padding:5px 10px;font-size:12px}.btn-danger{color:var(--red)}.btn-danger:hover{background:var(--red-bg)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.card-title{font-family:'Source Serif 4',serif;font-size:15px;font-weight:600}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow)}
+.stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-weight:600}
+.stat-value{font-size:26px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-1px}
+.stat-value.neg{color:var(--red)}.stat-value.pos{color:var(--green)}
+.stat-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.month-nav{display:flex;align-items:center;gap:8px}
+.month-nav button{background:var(--surface);border:1px solid var(--border);color:var(--text);width:34px;height:34px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px}
+.month-nav button:hover{background:var(--surface2)}
+.month-nav .ml{font-family:'Source Serif 4',serif;font-size:15px;font-weight:600;min-width:160px;text-align:center}
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:48px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:20px;background:var(--surface)}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:var(--accent-light)}
+.upload-zone h3{font-size:16px;margin-bottom:6px;font-family:'Source Serif 4',serif}.upload-zone p{font-size:13px;color:var(--text-dim)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);border-bottom:2px solid var(--border);position:sticky;top:0;background:var(--surface)}
+td{padding:10px 12px;border-bottom:1px solid var(--surface2);vertical-align:middle}
+tr:hover td{background:var(--surface2)}
+td.amt{font-family:'DM Mono',monospace;font-weight:500;text-align:right;white-space:nowrap}
+td.amt.deb{color:var(--red)}td.amt.cre{color:var(--green)}
+.cp{font-weight:500;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.desc{color:var(--text-dim);font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab{font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.ab.prive{background:var(--surface2);color:var(--text-dim)}.ab.zakelijk{background:var(--zakelijk-bg);color:var(--zakelijk)}
+.ab .dot{width:6px;height:6px;border-radius:50%}
+.cs{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius-sm);font-family:inherit;font-size:12px;cursor:pointer;min-width:140px}
+.cs:focus{outline:none;border-color:var(--accent)}
+.cat-list{display:flex;flex-direction:column;gap:6px}
+.cr{display:flex;align-items:center;gap:12px;padding:8px 0}.cr .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}.cr .nm{flex:1;font-size:14px}.cr .cnt{color:var(--text-muted);font-size:12px}.cr .am{font-family:'DM Mono',monospace;font-weight:600;font-size:14px}
+.cb{width:100%;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}.cbf{height:100%;border-radius:3px;transition:width .4s ease}
+.ri{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--surface2);font-size:13px}.ri:last-child{border-bottom:none}
+.rp{font-family:'DM Mono',monospace;font-size:12px;background:var(--surface2);padding:3px 10px;border-radius:6px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ct{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap}
+.si{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;width:240px}
+.si:focus{outline:none;border-color:var(--accent)}.si::placeholder{color:var(--text-muted)}
+.tabs{display:flex;border-bottom:2px solid var(--surface2);margin-bottom:20px}
+.tab{padding:10px 18px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}.tab:hover{color:var(--text)}.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.st{display:inline-flex;background:var(--surface2);border-radius:var(--radius-sm);padding:3px;gap:2px}
+.sb{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text-muted);font-family:inherit}.sb.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(44,36,24,.3);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:520px;max-width:90vw;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal h2{font-family:'Source Serif 4',serif;font-size:20px;margin-bottom:20px}
+.fg{margin-bottom:14px}.fg label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.fg input,.fg select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:14px}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--accent)}
+.ma{display:flex;justify-content:flex-end;gap:8px;margin-top:24px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 22px;font-size:13px;z-index:200;animation:slideIn .3s;box-shadow:var(--shadow-lg);max-width:380px}
+.toast.ok{border-left:4px solid var(--green)}.toast.err{border-left:4px solid var(--red)}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:130px}.bg{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}.br{width:100%;max-width:44px;border-radius:4px 4px 0 0;transition:height .4s;min-height:2px;cursor:pointer}.br:hover{opacity:.85}.bl-l{font-size:10px;color:var(--text-muted);font-weight:500}
+.bulk-bar{background:var(--accent);color:#fff;padding:10px 20px;border-radius:var(--radius);margin-bottom:16px;display:flex;align-items:center;gap:16px;font-size:13px;font-weight:500}
+.bulk-bar select{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 8px;border-radius:var(--radius-sm);font-family:inherit}
+.bulk-bar button{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:4px 12px;border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;font-weight:500}
+.hidden{display:none!important}
+.ai{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;color:#fff}
+.ai.ing{background:#FF6200}.ai.abn{background:#009B3A}.ai.rabo{background:#0033A0}.ai.mc{background:#EB001B}.ai.amex{background:#006FCF}
+.ac{display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--surface2)}.ac:last-child{border-bottom:none}
+.tl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:3px 8px;border-radius:4px}
+.tl.prive{background:var(--surface2);color:var(--text-dim)}.tl.zakelijk{background:var(--zakelijk-bg);color:var(--zakelijk)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* Freedom */
+.fh{background:linear-gradient(135deg,#2C2418,#3D3022,#2C2418);border-radius:16px;padding:36px 40px;margin-bottom:24px;color:#FAF6F1;position:relative;overflow:hidden}
+.fh .tr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.fh h2{font-family:'Source Serif 4',serif;font-size:20px;color:#E8DDD0}
+.sp{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600}
+.rs{display:flex;align-items:center;gap:40px}.rw{position:relative;width:180px;height:180px;flex-shrink:0}
+.rw svg{transform:rotate(-90deg)}.rbg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:10}.rf{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .8s,stroke .3s}
+.rc{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.rp-n{font-family:'DM Mono',monospace;font-size:42px;font-weight:700;color:#D4985A;line-height:1}.rp-l{font-size:12px;color:#A89F91;margin-top:4px}
+.fs{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fst{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:16px}
+.fst .fl{font-size:11px;color:#A89F91;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
+.fst .fv{font-family:'DM Mono',monospace;font-size:22px;font-weight:700}
+.fst .fv.grn{color:#6ECF8E}.fst .fv.red{color:#E88B7A}.fst .fv.gld{color:#D4985A}
+.fst .fsb{font-size:11px;color:#888;margin-top:4px}
+.ci{margin-bottom:14px}.ci label{display:block;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:5px}
+.ci .iw{position:relative}.ci .iw .pf{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px}
+.ci input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 12px 10px 28px;border-radius:var(--radius-sm);font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
+.ci input:focus{outline:none;border-color:var(--accent)}.ci input[readonly]{background:var(--surface2)}
+.ci .hn{font-size:11px;color:var(--text-muted);margin-top:4px}
+.bd{border-top:1px solid var(--border);padding-top:12px;margin-top:8px}
+.bln{display:flex;justify-content:space-between;padding:6px 0;font-size:13px}.bln.ind{padding-left:20px;color:var(--text-dim);font-size:12px}
+.bln.tot{border-top:2px solid var(--border);padding-top:10px;margin-top:4px;font-weight:700;font-size:15px}
+.bln .v{font-family:'DM Mono',monospace;font-weight:500;white-space:nowrap}
+.bln .v.neg{color:var(--red)}.bln .v.pos{color:var(--green)}.bln .v.acc{color:var(--accent);font-weight:700}
+.ib{background:var(--surface2);border-radius:var(--radius-sm);padding:14px 18px;font-size:13px;color:var(--text-dim);line-height:1.7;margin-top:12px}
+.ib strong{color:var(--text)}
+.loading{text-align:center;padding:40px;color:var(--text-muted)}
+/* Upload account select */
+.upload-acc-select{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.upload-acc-btn{padding:12px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;text-align:center;transition:all .15s;background:var(--surface)}
+.upload-acc-btn:hover{border-color:var(--border-hover)}
+.upload-acc-btn.selected{border-color:var(--accent);background:var(--accent-light)}
+.upload-acc-btn .name{font-weight:600;font-size:13px}.upload-acc-btn .sub{font-size:11px;color:var(--text-muted)}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:16px}.stats-row{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}.rs{flex-direction:column}.fs{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="sidebar-logo"><div class="icon">€</div><span>Lasten</span></div>
+<div class="nav-section">Overzicht</div>
+<div class="nav-item active" onclick="showPage('dashboard',this)">Dashboard</div>
+<div class="nav-item" onclick="showPage('transactions',this)">Transacties <span class="badge hidden" id="uncatBadge">0</span></div>
+<div class="nav-item" onclick="showPage('freedom',this)">Cashflow</div>
+<div class="nav-item" onclick="showPage('vermogen',this)">Vermogen</div>
+<div class="nav-section">Beheer</div>
+<div class="nav-item" onclick="showPage('upload',this)">Upload</div>
+<div class="nav-item" onclick="showPage('rules',this)">Regels</div>
+<div class="nav-item" onclick="showPage('categories',this)">Categorieën</div>
+<div class="sidebar-footer">
+<div class="sl"><span>Transacties</span><strong id="txCnt">0</strong></div>
+<div class="sl"><span>Regels</span><strong id="rlCnt">0</strong></div>
+</div>
+</aside>
+<main class="main">
+
+<!-- DASHBOARD -->
+<div id="page-dashboard">
+<div class="ph"><h1>Dashboard</h1><div class="actions">
+<div class="st"><button class="sb active" onclick="setScope('all')">Alles</button><button class="sb" onclick="setScope('prive')">Privé</button><button class="sb" onclick="setScope('zakelijk')">Zakelijk</button></div>
+<div class="month-nav"><button onclick="pm()">‹</button><div class="ml" id="ml1"></div><button onclick="nm()">›</button></div>
+</div></div>
+<div class="stats-row">
+<div class="stat-card"><div class="stat-label">Uitgaven</div><div class="stat-value neg" id="sU">€ 0</div><div class="stat-sub" id="sUN">0</div></div>
+<div class="stat-card"><div class="stat-label">Inkomsten</div><div class="stat-value pos" id="sI">€ 0</div><div class="stat-sub" id="sIN">0</div></div>
+<div class="stat-card"><div class="stat-label">Netto</div><div class="stat-value" id="sN">€ 0</div><div class="stat-sub">&nbsp;</div></div>
+<div class="stat-card"><div class="stat-label">Ongecategoriseerd</div><div class="stat-value" id="sX" style="color:var(--orange)">0</div><div class="stat-sub">transacties</div></div>
+</div>
+<div class="card"><div class="card-header"><span class="card-title">Per maand</span><button class="btn btn-sm" onclick="exportCSV()">📥 Export</button></div><div class="bar-chart" id="mChart"></div></div>
+<div class="g2">
+<div class="card"><div class="card-header"><span class="card-title">Per categorie</span></div><div class="cat-list" id="catBD"></div></div>
+<div class="card"><div class="card-header"><span class="card-title">Grootste uitgaven</span></div><div id="topE"></div></div>
+</div></div>
+
+<!-- TRANSACTIONS -->
+<div id="page-transactions" class="hidden">
+<div class="ph"><h1>Transacties</h1><div class="actions">
+<input class="si" placeholder="Zoeken..." id="txQ" oninput="renderTx()">
+<div class="st"><button class="sb active" onclick="setScope('all')">Alles</button><button class="sb" onclick="setScope('prive')">Privé</button><button class="sb" onclick="setScope('zakelijk')">Zakelijk</button></div>
+<div class="month-nav"><button onclick="pm()">‹</button><div class="ml" id="ml2"></div><button onclick="nm()">›</button></div>
+</div></div>
+<div class="tabs"><div class="tab active" onclick="setTxF('all',this)">Alle</div><div class="tab" onclick="setTxF('uncat',this)">Ongecategoriseerd</div><div class="tab" onclick="setTxF('deb',this)">Uitgaven</div><div class="tab" onclick="setTxF('cre',this)">Inkomsten</div></div>
+<div id="bulkBar" class="bulk-bar hidden"><span><span id="selN">0</span> geselecteerd</span><select id="bulkC"></select><button onclick="applyBulk()">Toepassen</button><button onclick="clearSel()">Annuleer</button></div>
+<div class="card" style="padding:0"><div style="max-height:65vh;overflow:auto">
+<table><thead><tr><th style="width:30px"><input type="checkbox" id="selAll" onchange="toggleAll()"></th><th>Datum</th><th>Rekening</th><th>Tegenpartij</th><th>Omschrijving</th><th>Categorie</th><th style="text-align:right">Bedrag</th></tr></thead><tbody id="txBody"></tbody></table>
+</div></div></div>
+
+<!-- FREEDOM -->
+<div id="page-freedom" class="hidden">
+<div class="ph"><h1>Cashflow</h1></div>
+
+<div class="stats-row">
+<div class="stat-card"><div class="stat-label">Privé nodig (netto/mnd)</div><div class="stat-value neg" id="fNeed">€ 0</div><div class="stat-sub">uit bankdata + buffer</div></div>
+<div class="stat-card"><div class="stat-label">Passief inkomen (netto/mnd)</div><div class="stat-value pos" id="fHave">€ 0</div><div class="stat-sub">na belasting</div></div>
+<div class="stat-card"><div class="stat-label">Cashflow</div><div class="stat-value" id="fGap">€ 0</div><div class="stat-sub" id="fGapS">per maand</div></div>
+<div class="stat-card"><div class="stat-label">Benodigd bruto BV</div><div class="stat-value" id="fBr" style="color:var(--accent)">€ 0</div><div class="stat-sub">excl. BTW per maand</div></div>
+</div>
+
+<!-- Net worth summary on freedom page -->
+<div class="card" style="margin-bottom:24px">
+<div class="card-header"><span class="card-title">Eigen vermogen</span><button class="btn btn-sm" onclick="showPage('vermogen',null);document.querySelectorAll('.nav-item')[3].classList.add('active')">Beheren →</button></div>
+<div class="g2" id="fVermogen">
+<div style="text-align:center;padding:12px"><div class="stat-label">Netto vermogen</div><div class="stat-value pos" id="fTotV">€ 0</div></div>
+<div id="fVCats" style="display:flex;flex-direction:column;gap:4px"></div>
+</div></div>
+
+<div class="g2">
+<div>
+<div class="card"><div class="card-title" style="margin-bottom:16px">💶 Privé nodig (per maand)</div>
+<div class="ci"><label>Maandelijkse privé-kosten</label><div class="iw"><span class="pf">€</span><input id="cPK" value="0" oninput="calcF()"></div><div class="hn" id="cPKh">Wordt automatisch gevuld uit transacties</div></div>
+<div class="ci"><label>Buffer / sparen</label><div class="iw"><span class="pf">€</span><input id="cBuf" value="500" oninput="calcF()"></div></div>
+<div class="ci"><label>Extra (contant)</label><div class="iw"><span class="pf">€</span><input id="cExt" value="0" oninput="calcF()"></div></div>
+<div class="bd"><div class="bln tot"><span>Netto nodig</span><span class="v acc" id="cNN">€ 0</span></div></div></div>
+<div class="card"><div class="card-title" style="margin-bottom:16px">🏢 BV-kosten (per maand)</div>
+<div class="ci"><label>Vaste BV-kosten</label><div class="iw"><span class="pf">€</span><input id="cZK" value="500" oninput="calcF()"></div></div>
+<div class="ci"><label>Uit transacties</label><div class="iw"><span class="pf">€</span><input id="cZKa" value="0" readonly></div></div></div>
+<div class="card"><div class="card-title" style="margin-bottom:16px">💰 Passief inkomen BV (bruto/mnd)</div>
+<div class="ci"><label>Huurinkomsten</label><div class="iw"><span class="pf">€</span><input id="cHuur" value="0" oninput="calcF()"></div></div>
+<div class="ci"><label>Overig passief</label><div class="iw"><span class="pf">€</span><input id="cPas" value="0" oninput="calcF()"></div></div>
+<div class="ci"><label>Uit zakelijke rekeningen</label><div class="iw"><span class="pf">€</span><input id="cInA" value="0" readonly></div></div></div>
+</div>
+<div>
+<div class="card"><div class="card-title" style="margin-bottom:16px">📊 Passief → netto</div><div class="bd" id="cDown" style="border:none;padding-top:0"></div></div>
+<div class="card"><div class="card-title" style="margin-bottom:16px">📊 Benodigd → bruto</div><div class="bd" id="cUp" style="border:none;padding-top:0"></div></div>
+<div class="card"><div class="card-title" style="margin-bottom:12px">⚙️ Fiscale parameters</div>
+<div class="g2" style="gap:8px">
+<div class="ci"><label>VPB ≤€200k</label><div class="iw"><span class="pf">%</span><input id="pV1" value="19" oninput="calcF()"></div></div>
+<div class="ci"><label>VPB >€200k</label><div class="iw"><span class="pf">%</span><input id="pV2" value="25.8" oninput="calcF()"></div></div>
+<div class="ci"><label>AB-heffing</label><div class="iw"><span class="pf">%</span><input id="pAB" value="24.5" oninput="calcF()"></div></div>
+<div class="ci"><label>DGA-salaris (jaar)</label><div class="iw"><span class="pf">€</span><input id="pDGA" value="56000" oninput="calcF()"></div></div>
+<div class="ci"><label>Effectief IB over DGA</label><div class="iw"><span class="pf">%</span><input id="pIB" value="37" oninput="calcF()"></div></div>
+</div>
+<div class="ib">💡 DGA-salaris is het verplichte minimum. De rest kun je als dividend uitkeren. Raadpleeg je boekhouder voor exacte cijfers.</div>
+</div></div></div></div>
+
+<!-- VERMOGEN -->
+<div id="page-vermogen" class="hidden">
+<div class="ph"><h1>Overzicht</h1><div class="actions"><button class="btn btn-primary" onclick="showAddAsset()">+ Bezitting</button><button class="btn" onclick="showAddPipeline()">+ Pipeline</button><button class="btn" onclick="showAddAssetCat()">+ Categorie</button></div></div>
+
+<div class="stats-row">
+<div class="stat-card"><div class="stat-label">Bezittingen</div><div class="stat-value pos" id="vBez">€ 0</div></div>
+<div class="stat-card"><div class="stat-label">Schulden</div><div class="stat-value neg" id="vSchuld">€ 0</div></div>
+<div class="stat-card"><div class="stat-label">Banksaldi</div><div class="stat-value" id="vBank" style="color:var(--blue)">€ 0</div></div>
+<div class="stat-card"><div class="stat-label">Netto vermogen</div><div class="stat-value" id="vNetto" style="color:var(--accent)">€ 0</div></div>
+</div>
+
+<!-- Banksaldi -->
+<div class="card"><div class="card-header"><span class="card-title">Banksaldi</span></div><div id="vAccTable"></div></div>
+
+<!-- Bezittingen per categorie -->
+<div id="vCatCards"></div>
+
+<!-- Pipeline -->
+<div class="card"><div class="card-header"><span class="card-title">Uitstaand</span><button class="btn btn-sm" onclick="showAddPipeline('uitstaand')">+ Toevoegen</button></div><div id="vPipeUit"></div></div>
+<div class="card"><div class="card-header"><span class="card-title">Verwachte inkomsten</span><button class="btn btn-sm" onclick="showAddPipeline('verwacht')">+ Toevoegen</button></div><div id="vPipeVerw"></div></div>
+
+<!-- Totalen -->
+<div class="card" style="background:var(--surface2)">
+<div id="vTotalen"></div>
+</div>
+</div>
+
+<!-- UPLOAD -->
+<div id="page-upload" class="hidden">
+<div class="ph"><h1>CSV uploaden</h1></div>
+<div class="card"><div class="card-title" style="margin-bottom:16px">1. Kies rekening</div>
+<div class="upload-acc-select" id="accSelect"></div></div>
+<div class="upload-zone" id="upZone" onclick="document.getElementById('fi').click()"><h3>2. Sleep CSV bestand hierheen</h3><p>Of klik om te selecteren</p></div>
+<input type="file" id="fi" accept=".csv,.CSV" style="display:none" onchange="handleFile(this.files[0])">
+<div class="card" style="padding:0"><div class="card-header" style="padding:18px 18px 0"><span class="card-title">Rekeningen</span></div><div id="accList"></div></div>
+</div>
+
+<!-- RULES -->
+<div id="page-rules" class="hidden">
+<div class="ph"><h1>Regels</h1><div class="actions"><input class="si" placeholder="Zoek..." id="rlQ" oninput="renderRules()"><button class="btn btn-primary" onclick="showAddRule()">+ Regel</button></div></div>
+<div class="card" style="padding:0"><div style="max-height:65vh;overflow-y:auto"><div id="rlList"></div></div></div></div>
+
+<!-- CATEGORIES -->
+<div id="page-categories" class="hidden">
+<div class="ph"><h1>Categorieën</h1><button class="btn btn-primary" onclick="showAddCat()">+ Nieuw</button></div>
+<div class="card" style="padding:0"><div id="catList"></div></div></div>
+
+</main></div>
+<div id="mOvl" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()"><div class="modal" id="mCnt"></div></div>
+
+<script>
+const SB_URL='https://diijaerxzgimmyskrjwy.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpaWphZXJ4emdpbW15c2tyand5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTk0MjQsImV4cCI6MjA5MTA3NTQyNH0.XVdefN6qfv8kFKdlX-VeXjKnuvtFfaJ_wax0ndcANjY';
+const H={'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY};
+const MN=['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+
+let accounts=[],categories=[],transactions=[],rules=[],assetCats=[],assets=[],pipeline=[];
+let curM=new Date().getMonth(),curY=new Date().getFullYear();
+let txFilter='all',scope='all',selIds=new Set(),selAcc=null;
+
+// === SUPABASE API ===
+async function sb(table,method='GET',body=null,query=''){
+  const url=`${SB_URL}/rest/v1/${table}${query}`;
+  const opts={method,headers:{...H}};
+  if(method==='GET')opts.headers['Accept']='application/json';
+  if(body)opts.body=JSON.stringify(body);
+  if(method==='POST')opts.headers['Prefer']='return=representation';
+  if(method==='PATCH')opts.headers['Prefer']='return=representation';
+  const r=await fetch(url,opts);
+  if(!r.ok){const e=await r.text();console.error(table,method,e);return null}
+  if(method==='DELETE')return true;
+  return r.json();
+}
+
+async function loadAll(){
+  [accounts,categories,transactions,rules,assetCats,assets,pipeline]=await Promise.all([
+    sb('accounts','GET',null,'?order=id'),
+    sb('categories','GET',null,'?order=sort_order'),
+    sb('transactions','GET',null,'?order=date.desc&limit=10000'),
+    sb('rules','GET',null,'?order=pattern'),
+    sb('asset_categories','GET',null,'?order=sort_order'),
+    sb('assets','GET',null,'?order=current_value.desc'),
+    sb('pipeline','GET',null,'?order=expected_amount.desc')
+  ]);
+  assetCats=assetCats||[];assets=assets||[];pipeline=pipeline||[];
+  renderAll();
+}
+
+// === CSV PARSING ===
+function parseCSV(text, accountId){
+  const acc=accounts.find(a=>a.id===accountId);
+  if(!acc)return[];
+  const bank=acc.bank;
+  const result=Papa.parse(text.trim(),{header:true,skipEmptyLines:true,dynamicTyping:false});
+  if(!result.data?.length)return[];
+  const rows=result.data;
+  // Detect format by headers
+  const hdrs=Object.keys(rows[0]).map(h=>h.toLowerCase().trim());
+  if(bank==='ING'||hdrs.includes('datum')||hdrs.includes('naam / omschrijving'))return parseING(rows,accountId);
+  if(bank==='ABN AMRO')return parseABN(rows,accountId);
+  if(bank==='Rabobank')return parseRabo(rows,accountId);
+  if(bank==='Mastercard')return parseMC(rows,accountId);
+  if(bank==='Amex')return parseAmex(rows,accountId);
+  // Fallback: try auto-detect
+  return parseGeneric(rows,accountId);
+}
+
+function parseING(rows,accId){
+  return rows.map(r=>{
+    const date=parseDate(r['Datum']||r['datum']);
+    const amt=parseAmt(r['Bedrag (EUR)']||r['bedrag (EUR)']||r['Bedrag']);
+    const dc=(r['Af Bij']||r['af bij']||'').toLowerCase();
+    const isD=dc==='af'||amt<0;
+    const cp=r['Naam / Omschrijving']||r['naam / omschrijving']||r['Tegenrekening Houder']||'';
+    const desc=r['Mededelingen']||r['mededelingen']||r['Omschrijving']||'';
+    const ci=r['Tegenrekening']||r['tegenrekening']||'';
+    if(!date)return null;
+    return{date,amount:Math.abs(amt)*(isD?-1:1),is_debit:isD,counterparty:cp.trim()||'Onbekend',counter_iban:ci.trim(),description:desc.trim(),account_id:accId}
+  }).filter(Boolean);
+}
+
+function parseABN(rows,accId){
+  return rows.map(r=>{
+    // ABN CSV: accountNumber,mutationcode,transactiondate,valuedate,startsaldo,endsaldo,amount,description
+    const date=parseDate(r['transactiondate']||r['Transactiedatum']||r['Datum']||Object.values(r)[2]);
+    const amtRaw=r['amount']||r['Bedrag']||r['Mutatie']||Object.values(r)[6];
+    const amt=parseAmt(amtRaw);
+    const isD=amt<0;
+    const desc=r['description']||r['Omschrijving']||Object.values(r)[7]||'';
+    const cp=extractCP(desc);
+    if(!date)return null;
+    return{date,amount:amt,is_debit:isD,counterparty:cp,counter_iban:'',description:desc.trim(),account_id:accId}
+  }).filter(Boolean);
+}
+
+function parseRabo(rows,accId){
+  return rows.map(r=>{
+    const date=parseDate(r['Datum']||r['Verwerkingsdatum']||Object.values(r)[0]);
+    const amtRaw=r['Bedrag']||r['bedrag']||Object.values(r)[3];
+    const amt=parseAmt(amtRaw);
+    const isD=amt<0;
+    const cp=r['Naam tegenpartij']||r['Tegenpartij']||r['naam tegenpartij']||'';
+    const desc=r['Omschrijving-1']||r['Omschrijving']||r['omschrijving']||'';
+    const ci=r['Tegenrekening IBAN / BBAN']||r['IBAN/BBAN']||'';
+    if(!date)return null;
+    return{date,amount:amt,is_debit:isD,counterparty:cp.trim()||extractCP(desc),counter_iban:ci.trim(),description:desc.trim(),account_id:accId}
+  }).filter(Boolean);
+}
+
+function parseMC(rows,accId){
+  return rows.map(r=>{
+    const date=parseDate(r['Transaction Date']||r['Datum']||r['Transactiedatum']||Object.values(r)[0]);
+    const amtRaw=r['Amount']||r['Bedrag']||Object.values(r)[2];
+    const amt=parseAmt(amtRaw);
+    const desc=r['Description']||r['Omschrijving']||Object.values(r)[1]||'';
+    if(!date)return null;
+    return{date,amount:Math.abs(amt)*-1,is_debit:true,counterparty:desc.trim().substring(0,60)||'Onbekend',counter_iban:'',description:desc.trim(),account_id:accId}
+  }).filter(Boolean);
+}
+
+function parseAmex(rows,accId){
+  return rows.map(r=>{
+    const date=parseDate(r['Datum']||r['Date']||r['Verwerkingsdatum']||Object.values(r)[0]);
+    const amtRaw=r['Bedrag']||r['Amount']||Object.values(r)[1];
+    const amt=parseAmt(amtRaw);
+    const desc=r['Omschrijving']||r['Description']||Object.values(r)[2]||'';
+    if(!date)return null;
+    return{date,amount:Math.abs(amt)*-1,is_debit:true,counterparty:desc.trim().substring(0,60)||'Onbekend',counter_iban:'',description:desc.trim(),account_id:accId}
+  }).filter(Boolean);
+}
+
+function parseGeneric(rows,accId){
+  return rows.map(r=>{
+    const vals=Object.values(r);
+    let date=null,amt=0,desc='';
+    for(const v of vals){if(!date)date=parseDate(v);if(!amt)amt=parseAmt(v);if(typeof v==='string'&&v.length>5&&!date)desc=v}
+    if(!date||!amt)return null;
+    return{date,amount:amt,is_debit:amt<0,counterparty:extractCP(desc),counter_iban:'',description:desc.trim(),account_id:accId}
+  }).filter(Boolean);
+}
+
+function extractBalance(text,accountId){
+  const acc=accounts.find(a=>a.id===accountId);if(!acc)return null;
+  const result=Papa.parse(text.trim(),{header:true,skipEmptyLines:true,dynamicTyping:false});
+  if(!result.data?.length)return null;
+  const rows=result.data;
+  // Sort by date desc, take most recent row's balance
+  const lastRow=rows[rows.length-1];
+  const firstRow=rows[0];
+  // Try both first and last row (CSV might be sorted either way)
+  let bal=null,balDate=null;
+
+  function tryExtract(row){
+    // ING: "Saldo na mutatie"
+    let v=row['Saldo na mutatie']||row['saldo na mutatie'];
+    if(v)return parseAmt(v);
+    // ABN: endsaldo or column 5
+    v=row['endsaldo']||row['Eindsaldo']||row['Saldo'];
+    if(v)return parseAmt(v);
+    // Rabo: "Saldo na trn"
+    v=row['Saldo na trn']||row['Saldo na transactie']||row['saldo na trn'];
+    if(v)return parseAmt(v);
+    return null;
+  }
+
+  // Try last row first (most CSVs are chronological)
+  bal=tryExtract(lastRow);
+  if(bal!==null){
+    const d=parseDate(lastRow['Datum']||lastRow['datum']||lastRow['transactiondate']||lastRow['Verwerkingsdatum']||Object.values(lastRow)[0]);
+    balDate=d;
+  }
+  // If last row didn't work, try first row (reverse chronological)
+  if(bal===null){
+    bal=tryExtract(firstRow);
+    if(bal!==null){
+      const d=parseDate(firstRow['Datum']||firstRow['datum']||firstRow['transactiondate']||firstRow['Verwerkingsdatum']||Object.values(firstRow)[0]);
+      balDate=d;
+    }
+  }
+  // For credit cards: sum all amounts as outstanding balance (negative = you owe)
+  if(bal===null&&(acc.bank==='Mastercard'||acc.bank==='Amex')){
+    bal=rows.reduce((s,r)=>{const a=parseAmt(r['Amount']||r['Bedrag']||Object.values(r)[2]||'0');return s+a},0);
+    bal=Math.abs(bal)*-1; // credit card debt is negative
+    balDate=parseDate(lastRow['Datum']||lastRow['Date']||lastRow['Transaction Date']||Object.values(lastRow)[0]);
+  }
+
+  if(bal!==null)return{balance:bal,balance_date:balDate};
+  return null;
+}
+
+function parseDate(v){
+  if(!v)return null;v=v.toString().trim();
+  // Try YYYYMMDD, YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY
+  let m;
+  if(m=v.match(/^(\d{4})-(\d{2})-(\d{2})/))return`${m[1]}-${m[2]}-${m[3]}`;
+  if(m=v.match(/^(\d{4})(\d{2})(\d{2})$/))return`${m[1]}-${m[2]}-${m[3]}`;
+  if(m=v.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/))return`${m[3]}-${m[2]}-${m[1]}`;
+  if(m=v.match(/^(\d{2})[-/](\d{2})[-/](\d{2})$/))return`20${m[3]}-${m[2]}-${m[1]}`;
+  return null;
+}
+
+function parseAmt(v){
+  if(!v)return 0;v=v.toString().trim().replace(/[€$\s]/g,'');
+  // Handle "1.234,56" (NL) and "1,234.56" (EN)
+  if(v.includes(',')&&v.includes('.')){
+    if(v.lastIndexOf(',')>v.lastIndexOf('.'))v=v.replace(/\./g,'').replace(',','.');
+    else v=v.replace(/,/g,'');
+  }else if(v.includes(',')&&!v.includes('.')){
+    const parts=v.split(',');
+    if(parts[parts.length-1].length<=2)v=v.replace(',','.');else v=v.replace(/,/g,'');
+  }
+  return parseFloat(v)||0;
+}
+
+function extractCP(desc){
+  if(!desc)return'Onbekend';
+  const clean=desc.replace(/\d{10,}/g,'').trim();
+  return clean.substring(0,60)||'Onbekend';
+}
+
+// === FILE HANDLING ===
+async function handleFile(file){
+  if(!file||!selAcc){showToast('Selecteer eerst een rekening','err');return}
+  const text=await file.text();
+  const newTx=parseCSV(text,selAcc);
+  if(!newTx.length){showToast('Geen transacties gevonden in CSV','err');return}
+  // Add dedup keys and source
+  const existing=new Set(transactions.map(t=>t.dedup_key).filter(Boolean));
+  const toInsert=[];
+  for(const tx of newTx){
+    tx.source_file=file.name;
+    tx.dedup_key=`${tx.date}_${tx.account_id}_${tx.amount}_${(tx.counterparty||'').substring(0,30)}`;
+    if(!existing.has(tx.dedup_key)){toInsert.push(tx);existing.add(tx.dedup_key)}
+  }
+  if(!toInsert.length){showToast('Alle transacties al geïmporteerd','ok');return}
+  // Insert in batches of 500
+  let inserted=0;
+  for(let i=0;i<toInsert.length;i+=500){
+    const batch=toInsert.slice(i,i+500);
+    const res=await sb('transactions','POST',batch);
+    if(res)inserted+=res.length;
+  }
+  // Apply rules to new uncategorized
+  await autoApplyRules(toInsert.map(t=>t.dedup_key));
+  // Extract and save balance
+  const bal=extractBalance(text,selAcc);
+  if(bal)await sb('accounts','PATCH',{balance:bal.balance,balance_date:bal.balance_date},`?id=eq.${selAcc}`);
+  await loadAll();
+  showToast(`${inserted} transacties geïmporteerd${bal?' · saldo bijgewerkt':''}`,'ok');
+}
+
+async function autoApplyRules(newKeys){
+  // Fetch uncategorized among new
+  const uncat=transactions.length?
+    await sb('transactions','GET',null,`?category_id=is.null&dedup_key=in.(${newKeys.map(k=>`"${k}"`).join(',')})&limit=5000`):[];
+  if(!uncat?.length)return;
+  for(const tx of uncat){
+    for(const r of rules){
+      const val=(tx[r.field]||tx.counterparty||'').toLowerCase();
+      if(val.includes(r.pattern.toLowerCase())){
+        await sb('transactions','PATCH',{category_id:r.category_id},`?id=eq.${tx.id}`);
+        break;
+      }
+    }
+  }
+}
+
+document.getElementById('upZone').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('dragover')});
+document.getElementById('upZone').addEventListener('dragleave',e=>e.currentTarget.classList.remove('dragover'));
+document.getElementById('upZone').addEventListener('drop',e=>{e.preventDefault();e.currentTarget.classList.remove('dragover');handleFile(e.dataTransfer.files[0])});
+
+// === NAVIGATION ===
+function setScope(s){scope=s;document.querySelectorAll('.st').forEach(t=>{t.querySelectorAll('.sb').forEach(b=>{b.classList.toggle('active',b.textContent.trim()===(s==='all'?'Alles':s==='prive'?'Privé':'Zakelijk'))})});renderAll()}
+function fS(txs){if(scope==='all')return txs;return txs.filter(t=>{const a=accounts.find(x=>x.id===t.account_id);return scope==='zakelijk'?a?.type==='zakelijk':a?.type!=='zakelijk'})}
+function showPage(p,el){document.querySelectorAll('.main>div[id^="page-"]').forEach(x=>x.classList.add('hidden'));document.getElementById('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));if(el)el.classList.add('active');renderAll()}
+function pm(){curM--;if(curM<0){curM=11;curY--}renderAll()}
+function nm(){curM++;if(curM>11){curM=0;curY++}renderAll()}
+function renderAll(){const l=`${MN[curM]} ${curY}`;document.querySelectorAll('.ml').forEach(e=>e.textContent=l);renderDash();renderTx();renderRules();renderCats();renderAccs();renderVermogen();updateCnts();calcF()}
+function gM(m,y){if(m===undefined)m=curM;if(y===undefined)y=curY;return transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y})}
+function fmt(a){return'\u20AC '+Math.abs(a).toLocaleString('nl-NL',{minimumFractionDigits:0,maximumFractionDigits:0})}
+function fmt2(a){return'\u20AC '+Math.abs(a).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function fmtD(d){return new Date(d).toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'})}
+
+// === DASHBOARD ===
+function renderDash(){
+  const tx=fS(gM()),deb=tx.filter(t=>t.is_debit&&t.category_id!=='intern'),cre=tx.filter(t=>!t.is_debit&&t.category_id!=='intern'),unc=tx.filter(t=>!t.category_id);
+  const out=deb.reduce((s,t)=>s+Math.abs(t.amount),0),inc=cre.reduce((s,t)=>s+Math.abs(t.amount),0),net=inc-out;
+  document.getElementById('sU').textContent=fmt2(out);document.getElementById('sUN').textContent=deb.length+' transacties';
+  document.getElementById('sI').textContent=fmt2(inc);document.getElementById('sIN').textContent=cre.length+' transacties';
+  const ne=document.getElementById('sN');ne.textContent=(net>=0?'+':'-')+' '+fmt2(Math.abs(net));ne.className='stat-value '+(net>=0?'pos':'neg');
+  document.getElementById('sX').textContent=unc.length;
+  // Cat breakdown
+  const cm={};deb.forEach(t=>{const c=t.category_id||'uncat';if(!cm[c])cm[c]={t:0,n:0};cm[c].t+=Math.abs(t.amount);cm[c].n++});
+  const sorted=Object.entries(cm).sort((a,b)=>b[1].t-a[1].t),mx=sorted[0]?sorted[0][1].t:1;
+  document.getElementById('catBD').innerHTML=sorted.length?sorted.map(([id,d])=>{const c=categories.find(x=>x.id===id);const nm=c?`${c.icon} ${c.name}`:'❓';const co=c?.color||'#A89F91';return`<div class="cr"><div class="dot" style="background:${co}"></div><div class="nm">${nm}</div><div class="cnt">${d.n}×</div><div class="am" style="color:${co}">${fmt(d.t)}</div></div><div class="cb"><div class="cbf" style="width:${(d.t/mx*100).toFixed(0)}%;background:${co}"></div></div>`}).join(''):'<p style="padding:20px;text-align:center;color:var(--text-muted)">Geen data</p>';
+  const top=[...deb].sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount)).slice(0,8);
+  document.getElementById('topE').innerHTML=top.length?top.map(t=>{const c=categories.find(x=>x.id===t.category_id);return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--surface2)"><span>${c?.icon||'❓'}</span><span class="cp" style="flex:1">${t.counterparty}</span><span class="amt deb" style="font-family:'DM Mono';font-weight:600">${fmt(t.amount)}</span></div>`}).join(''):'';
+  // Chart
+  const el=document.getElementById('mChart'),ms=[];
+  for(let i=11;i>=0;i--){let m=curM-i,y=curY;while(m<0){m+=12;y--}const t=fS(gM(m,y)).filter(t=>t.is_debit&&t.category_id!=='intern').reduce((s,t)=>s+Math.abs(t.amount),0);ms.push({m,y,t,l:MN[m].substring(0,3)})}
+  const cmx=Math.max(...ms.map(x=>x.t),1);
+  el.innerHTML=ms.map(x=>{const h=(x.t/cmx*100).toFixed(0),cur=x.m===curM&&x.y===curY;return`<div class="bg"><div class="br" style="height:${Math.max(h,3)}%;background:${cur?'var(--accent)':'var(--surface3)'}"></div><div class="bl-l" style="${cur?'color:var(--accent);font-weight:700':''}">${x.l}</div></div>`}).join('');
+}
+
+// === TRANSACTIONS ===
+function setTxF(f,el){txFilter=f;document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');renderTx()}
+function renderTx(){
+  let tx=fS(gM());const q=(document.getElementById('txQ')?.value||'').toLowerCase();
+  if(q)tx=tx.filter(t=>(t.counterparty||'').toLowerCase().includes(q)||(t.description||'').toLowerCase().includes(q));
+  if(txFilter==='uncat')tx=tx.filter(t=>!t.category_id);else if(txFilter==='deb')tx=tx.filter(t=>t.is_debit);else if(txFilter==='cre')tx=tx.filter(t=>!t.is_debit);
+  tx.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const co=categories.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  document.getElementById('txBody').innerHTML=tx.map(t=>{
+    const a=accounts.find(x=>x.id===t.account_id)||{name:'?',type:'prive',color:'#888'};
+    return`<tr><td><input type="checkbox" ${selIds.has(t.id)?'checked':''} onchange="tSel('${t.id}')"></td><td style="white-space:nowrap;font-size:12px;color:var(--text-dim)">${fmtD(t.date)}</td><td><span class="ab ${a.type}"><span class="dot" style="background:${a.color}"></span>${a.name}</span></td><td class="cp">${t.counterparty||''}</td><td class="desc">${t.description||''}</td><td><select class="cs" onchange="catTx('${t.id}',this.value)"><option value="">— Kies —</option>${co}</select></td><td class="amt ${t.is_debit?'deb':'cre'}">${t.is_debit?'-':'+'} ${fmt2(t.amount)}</td></tr>`}).join('');
+  setTimeout(()=>{document.querySelectorAll('#txBody .cs').forEach((s,i)=>{if(tx[i]?.category_id)s.value=tx[i].category_id})},0);
+  const bar=document.getElementById('bulkBar');if(selIds.size>0){bar.classList.remove('hidden');document.getElementById('selN').textContent=selIds.size}else bar.classList.add('hidden');
+  document.getElementById('bulkC').innerHTML=`<option value="">—</option>${co}`;
+}
+
+async function catTx(id,catId){
+  await sb('transactions','PATCH',{category_id:catId||null},`?id=eq.${id}`);
+  const tx=transactions.find(t=>t.id===id);
+  if(tx)tx.category_id=catId||null;
+  // Learn rule + auto-apply to same counterparty
+  if(catId&&tx?.counterparty){
+    const pattern=tx.counterparty.trim();
+    if(pattern&&pattern!=='Onbekend'&&!rules.some(r=>r.pattern.toLowerCase()===pattern.toLowerCase())){
+      const res=await sb('rules','POST',{pattern,field:'counterparty',category_id:catId});
+      if(res)rules.push(res[0]);
+    }
+    // Apply to same counterparty
+    const same=transactions.filter(t=>t.id!==id&&!t.category_id&&(t.counterparty||'').toLowerCase()===pattern.toLowerCase());
+    let n=0;
+    for(const s of same){
+      await sb('transactions','PATCH',{category_id:catId},`?id=eq.${s.id}`);
+      s.category_id=catId;n++;
+    }
+    if(n>0)showToast(`${n} mee-gecategoriseerd`,'ok');
+  }
+  renderAll();
+}
+
+function tSel(id){selIds.has(id)?selIds.delete(id):selIds.add(id);renderTx()}
+function toggleAll(){const a=document.getElementById('selAll').checked;selIds.clear();if(a)fS(gM()).forEach(t=>selIds.add(t.id));renderTx()}
+async function applyBulk(){const c=document.getElementById('bulkC').value;if(!c)return;let n=0;
+  for(const id of selIds){await sb('transactions','PATCH',{category_id:c},`?id=eq.${id}`);const tx=transactions.find(t=>t.id===id);if(tx){tx.category_id=c;
+    const p=tx.counterparty?.trim();if(p&&p!=='Onbekend'&&!rules.some(r=>r.pattern.toLowerCase()===p.toLowerCase())){const res=await sb('rules','POST',{pattern:p,field:'counterparty',category_id:c});if(res)rules.push(res[0])}n++}}
+  selIds.clear();renderAll();showToast(`${n} gecategoriseerd`,'ok')}
+function clearSel(){selIds.clear();renderTx()}
+
+// === RULES ===
+function renderRules(){const q=(document.getElementById('rlQ')?.value||'').toLowerCase();
+  let R=rules.filter(r=>!q||r.pattern.toLowerCase().includes(q));
+  document.getElementById('rlList').innerHTML=R.length?R.map(r=>{const c=categories.find(x=>x.id===r.category_id);return`<div class="ri"><span class="rp">${r.pattern}</span><span style="color:var(--text-muted)">→</span><span class="ct" style="background:${c?c.color+'18':'var(--surface2)'};color:${c?.color||'var(--text)'}">${c?`${c.icon} ${c.name}`:r.category_id}</span><button class="btn btn-sm btn-danger" onclick="delRule(${r.id})">🗑</button></div>`}).join(''):'<p style="padding:32px;text-align:center;color:var(--text-muted)">Regels worden auto aangemaakt.</p>';
+  document.getElementById('rlCnt').textContent=rules.length}
+async function delRule(id){if(!confirm('Verwijderen?'))return;await sb('rules','DELETE',null,`?id=eq.${id}`);rules=rules.filter(r=>r.id!==id);renderRules()}
+function showAddRule(){const o=categories.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  document.getElementById('mCnt').innerHTML=`<h2>Nieuwe regel</h2><div class="fg"><label>Patroon</label><input id="nRP" placeholder="Albert Heijn"></div><div class="fg"><label>Zoek in</label><select id="nRF"><option value="counterparty">Tegenpartij</option><option value="description">Omschrijving</option></select></div><div class="fg"><label>Categorie</label><select id="nRC">${o}</select></div><div class="ma"><button class="btn" onclick="closeModal()">Annuleer</button><button class="btn btn-primary" onclick="saveRule()">OK</button></div>`;
+  document.getElementById('mOvl').classList.remove('hidden')}
+async function saveRule(){const p=document.getElementById('nRP').value.trim();if(!p)return;
+  const res=await sb('rules','POST',{pattern:p,field:document.getElementById('nRF').value,category_id:document.getElementById('nRC').value});
+  if(res)rules.push(res[0]);closeModal();renderRules()}
+
+// === CATEGORIES ===
+function renderCats(){const cn={};transactions.forEach(t=>{cn[t.category_id||'x']=(cn[t.category_id||'x']||0)+1});
+  document.getElementById('catList').innerHTML=categories.map(c=>`<div class="ri"><span style="font-size:18px">${c.icon}</span><span style="flex:1;font-weight:500">${c.name}</span><span style="color:var(--text-muted);font-size:12px">${cn[c.id]||0}×</span><div style="width:14px;height:14px;border-radius:50%;background:${c.color}"></div></div>`).join('')}
+function showAddCat(){document.getElementById('mCnt').innerHTML=`<h2>Categorie</h2><div class="fg"><label>Naam</label><input id="nCN"></div><div class="fg"><label>Icoon</label><input id="nCI" placeholder="📦" maxlength="2"></div><div class="fg"><label>Kleur</label><input id="nCC" type="color" value="#B8763E"></div><div class="ma"><button class="btn" onclick="closeModal()">Annuleer</button><button class="btn btn-primary" onclick="saveCat()">OK</button></div>`;document.getElementById('mOvl').classList.remove('hidden')}
+async function saveCat(){const n=document.getElementById('nCN').value.trim();if(!n)return;
+  await sb('categories','POST',{id:n.toLowerCase().replace(/[^a-z0-9]/g,'_'),name:n,icon:document.getElementById('nCI').value||'📦',color:document.getElementById('nCC').value});
+  await loadAll();closeModal()}
+
+// === ACCOUNTS ===
+function renderAccs(){
+  // Upload account selector
+  document.getElementById('accSelect').innerHTML=accounts.map(a=>{
+    const bc=a.bank==='ING'?'ing':a.bank==='ABN AMRO'?'abn':a.bank==='Rabobank'?'rabo':a.bank==='Mastercard'?'mc':a.bank==='Amex'?'amex':'';
+    return`<div class="upload-acc-btn ${selAcc===a.id?'selected':''}" onclick="selAcc='${a.id}';renderAccs()"><div class="name">${a.name}</div><div class="sub">${a.bank} · ${a.type}</div></div>`}).join('');
+  // Account list
+  document.getElementById('accList').innerHTML=accounts.map(a=>{
+    const bc=a.bank==='ING'?'ing':a.bank==='ABN AMRO'?'abn':a.bank==='Rabobank'?'rabo':a.bank==='Mastercard'?'mc':a.bank==='Amex'?'amex':'';
+    const bi=a.bank==='ING'?'ING':a.bank==='ABN AMRO'?'ABN':a.bank==='Rabobank'?'R':a.bank==='Mastercard'?'MC':a.bank==='Amex'?'AX':'?';
+    const cnt=transactions.filter(t=>t.account_id===a.id).length;
+    const balStr=a.balance?`<span style="font-family:'DM Mono';font-weight:600;color:${Number(a.balance)>=0?'var(--green)':'var(--red)'}">${fmt2(a.balance)}</span>`:'';
+    return`<div class="ac"><div class="ai ${bc}">${bi}</div><div style="flex:1"><div style="font-weight:600">${a.name}</div><div style="font-size:12px;color:var(--text-muted)">${cnt} transacties${a.balance_date?' · saldo '+a.balance_date:''}</div></div>${balStr}<span class="tl ${a.type}">${a.type==='zakelijk'?'🏢 Zakelijk':'👤 Privé'}</span></div>`}).join('')}
+
+// === VERMOGEN ===
+function renderVermogen(){
+  const assetVal=assets.reduce((s,a)=>s+Number(a.current_value),0);
+  const debtVal=assets.reduce((s,a)=>s+Number(a.debt||0),0);
+  const accTot=accounts.reduce((s,a)=>s+Number(a.balance||0),0);
+  const pipeUit=pipeline.filter(p=>p.type==='uitstaand'&&p.status!=='afgerond');
+  const pipeVerw=pipeline.filter(p=>p.type==='verwacht'&&p.status!=='afgerond');
+  const uitTot=pipeUit.reduce((s,p)=>s+Number(p.expected_amount),0);
+  const verwTot=pipeVerw.reduce((s,p)=>s+Number(p.expected_amount),0);
+  const netto=assetVal-debtVal+accTot;
+
+  // Stats
+  document.getElementById('vBez').textContent=fmt(assetVal);
+  document.getElementById('vSchuld').textContent=fmt(debtVal);
+  document.getElementById('vBank').textContent=fmt(accTot);
+  document.getElementById('vNetto').textContent=fmt(netto);
+
+  // Banksaldi
+  const accsWithBal=accounts.filter(a=>a.balance);
+  document.getElementById('vAccTable').innerHTML=accsWithBal.length?`<table><thead><tr><th>Rekening</th><th>Type</th><th>Peildatum</th><th style="text-align:right">Saldo</th></tr></thead><tbody>
+    ${accsWithBal.map(a=>`<tr><td style="font-weight:500">${a.name}</td><td><span class="tl ${a.type}">${a.type}</span></td><td class="desc">${a.balance_date||'—'}</td><td class="amt ${Number(a.balance)>=0?'cre':'deb'}">${fmt2(a.balance)}</td></tr>`).join('')}
+    <tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="3">Totaal</td><td class="amt ${accTot>=0?'cre':'deb'}">${fmt2(accTot)}</td></tr>
+    </tbody></table>`:'<p style="padding:12px;color:var(--text-muted);font-size:13px">Saldi worden bijgewerkt bij CSV-upload</p>';
+
+  // Bezittingen per categorie
+  const groups={};
+  assetCats.forEach(c=>{groups[c.id]={cat:c,items:[],valTot:0,debtTot:0}});
+  assets.forEach(a=>{const g=groups[a.category_id];if(g){g.items.push(a);g.valTot+=Number(a.current_value);g.debtTot+=Number(a.debt||0)}else{if(!groups['_none'])groups['_none']={cat:{id:'_none',name:'Zonder categorie',icon:'📦',color:'#A89F91'},items:[],valTot:0,debtTot:0};groups['_none'].items.push(a);groups['_none'].valTot+=Number(a.current_value);groups['_none'].debtTot+=Number(a.debt||0)}});
+
+  const el=document.getElementById('vCatCards');
+  el.innerHTML=Object.values(groups).filter(g=>g.items.length>0).map(g=>{
+    const hasDebt=g.debtTot>0;
+    return`<div class="card">
+      <div class="card-header"><span class="card-title">${g.cat.icon} ${g.cat.name}</span><span style="font-family:'DM Mono';font-weight:700;font-size:16px;color:${g.cat.color}">${hasDebt?'netto '+fmt(g.valTot-g.debtTot):fmt(g.valTot)}</span></div>
+      <table><thead><tr><th>Naam</th><th>Notities</th><th style="text-align:right">Waarde</th>${hasDebt?'<th style="text-align:right">Schuld</th><th style="text-align:right">Netto</th>':''}<th style="width:80px"></th></tr></thead><tbody>
+      ${g.items.map(a=>{const d=Number(a.debt||0);return`<tr><td style="font-weight:500">${a.name}</td><td class="desc">${a.notes||''}</td><td class="amt cre">${fmt(a.current_value)}</td>${hasDebt?`<td class="amt deb">${d?fmt(d):'—'}</td><td class="amt" style="font-weight:600">${fmt(Number(a.current_value)-d)}</td>`:''}<td><button class="btn btn-sm" onclick="editAsset('${a.id}')">✏️</button> <button class="btn btn-sm btn-danger" onclick="delAsset('${a.id}')">🗑</button></td></tr>`}).join('')}
+      </tbody></table></div>`}).join('');
+
+  // Empty categories
+  const empty=Object.values(groups).filter(g=>g.items.length===0&&g.cat.id!=='_none');
+  if(empty.length)el.innerHTML+=empty.map(g=>`<div class="card"><div class="card-header"><span class="card-title">${g.cat.icon} ${g.cat.name}</span><button class="btn btn-sm" onclick="showAddAsset('${g.cat.id}')">+ Toevoegen</button></div></div>`).join('');
+
+  // Pipeline: Uitstaand
+  const statusLabel={open:'Open',in_onderhandeling:'In onderhandeling',afgerond:'Afgerond',vervallen:'Vervallen'};
+  const statusColor={open:'var(--orange)',in_onderhandeling:'var(--blue)',afgerond:'var(--green)',vervallen:'var(--text-muted)'};
+  document.getElementById('vPipeUit').innerHTML=pipeUit.length?`<table><thead><tr><th>Naam</th><th>Status</th><th>Notities</th><th style="text-align:right">Bedrag</th><th style="width:80px"></th></tr></thead><tbody>
+    ${pipeUit.map(p=>`<tr><td style="font-weight:500">${p.name}</td><td><span style="color:${statusColor[p.status]||'var(--text)'};font-weight:600;font-size:12px">${statusLabel[p.status]||p.status}</span></td><td class="desc">${p.notes||''}</td><td class="amt cre">${fmt(p.expected_amount)}</td><td><button class="btn btn-sm" onclick="editPipe('${p.id}')">✏️</button> <button class="btn btn-sm btn-danger" onclick="delPipe('${p.id}')">🗑</button></td></tr>`).join('')}
+    <tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="3">Totaal uitstaand</td><td class="amt cre">${fmt(uitTot)}</td><td></td></tr>
+    </tbody></table>`:'<p style="padding:12px;color:var(--text-muted);font-size:13px">Geen uitstaande bedragen</p>';
+
+  // Pipeline: Verwacht
+  document.getElementById('vPipeVerw').innerHTML=pipeVerw.length?`<table><thead><tr><th>Naam</th><th>Status</th><th>Notities</th><th style="text-align:right">Verwacht</th><th style="width:80px"></th></tr></thead><tbody>
+    ${pipeVerw.map(p=>`<tr><td style="font-weight:500">${p.name}</td><td><span style="color:${statusColor[p.status]||'var(--text)'};font-weight:600;font-size:12px">${statusLabel[p.status]||p.status}</span></td><td class="desc">${p.notes||''}</td><td class="amt cre">${fmt(p.expected_amount)}</td><td><button class="btn btn-sm" onclick="editPipe('${p.id}')">✏️</button> <button class="btn btn-sm btn-danger" onclick="delPipe('${p.id}')">🗑</button></td></tr>`).join('')}
+    <tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="3">Totaal verwacht</td><td class="amt cre">${fmt(verwTot)}</td><td></td></tr>
+    </tbody></table>`:'<p style="padding:12px;color:var(--text-muted);font-size:13px">Geen verwachte inkomsten</p>';
+
+  // Totalen
+  document.getElementById('vTotalen').innerHTML=`
+    <div class="bln"><span>Bezittingen</span><span class="v pos">${fmt(assetVal)}</span></div>
+    <div class="bln"><span>Schulden / hypotheken</span><span class="v neg">- ${fmt(debtVal)}</span></div>
+    <div class="bln"><span>Banksaldi</span><span class="v">${fmt(accTot)}</span></div>
+    <div class="bln tot"><span>Netto vermogen</span><span class="v acc">${fmt(netto)}</span></div>
+    <div class="bln" style="margin-top:12px"><span style="color:var(--text-muted)">Uitstaand (niet meegeteld)</span><span class="v" style="color:var(--text-muted)">${fmt(uitTot)}</span></div>
+    <div class="bln"><span style="color:var(--text-muted)">Verwachte inkomsten (niet meegeteld)</span><span class="v" style="color:var(--text-muted)">${fmt(verwTot)}</span></div>
+    <div class="bln" style="border-top:1px dashed var(--border);padding-top:8px;margin-top:4px"><span style="color:var(--text-dim)">Incl. uitstaand + verwacht</span><span class="v" style="color:var(--text-dim)">${fmt(netto+uitTot+verwTot)}</span></div>`;
+
+  // Cashflow page summary
+  document.getElementById('fTotV').textContent=fmt(netto);
+  const fvc=document.getElementById('fVCats');
+  let fvcHtml=Object.values(groups).filter(g=>g.valTot>0).sort((a,b)=>b.valTot-a.valTot).map(g=>`
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:var(--text-dim)">${g.cat.icon} ${g.cat.name}</span><span style="font-family:'DM Mono';font-weight:600">${fmt(g.valTot-g.debtTot)}</span></div>`).join('');
+  if(accTot)fvcHtml+=`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:var(--text-dim)">💶 Banksaldi</span><span style="font-family:'DM Mono';font-weight:600">${fmt(accTot)}</span></div>`;
+  fvc.innerHTML=fvcHtml||'<p style="font-size:13px;color:var(--text-muted)">Geen data</p>';
+}
+
+// Asset CRUD
+function showAddAsset(preselCat){
+  const o=assetCats.map(c=>`<option value="${c.id}" ${c.id===preselCat?'selected':''}>${c.icon} ${c.name}</option>`).join('');
+  document.getElementById('mCnt').innerHTML=`<h2>Bezitting toevoegen</h2>
+    <div class="fg"><label>Naam</label><input id="aName" placeholder="bijv. Appartement Jordaan"></div>
+    <div class="fg"><label>Categorie</label><select id="aCat">${o}</select></div>
+    <div class="fg"><label>Huidige waarde (€)</label><input id="aVal" type="number" placeholder="350000"></div>
+    <div class="fg"><label>Schuld / hypotheek (€)</label><input id="aDebt" type="number" placeholder="225000" value="0"></div>
+    <div class="fg"><label>Notities</label><input id="aNotes" placeholder="bijv. WOZ 2026, kenteken"></div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Annuleer</button><button class="btn btn-primary" onclick="saveAsset()">Toevoegen</button></div>`;
+  document.getElementById('mOvl').classList.remove('hidden');
+}
+
+async function saveAsset(){
+  const name=document.getElementById('aName').value.trim();if(!name)return;
+  await sb('assets','POST',{name,category_id:document.getElementById('aCat').value,current_value:parseFloat(document.getElementById('aVal').value)||0,debt:parseFloat(document.getElementById('aDebt').value)||0,notes:document.getElementById('aNotes').value.trim()});
+  closeModal();await loadAll();showToast('Toegevoegd','ok');
+}
+
+function editAsset(id){
+  const a=assets.find(x=>x.id===id);if(!a)return;
+  const o=assetCats.map(c=>`<option value="${c.id}" ${c.id===a.category_id?'selected':''}>${c.icon} ${c.name}</option>`).join('');
+  document.getElementById('mCnt').innerHTML=`<h2>Bezitting bewerken</h2>
+    <div class="fg"><label>Naam</label><input id="aName" value="${a.name}"></div>
+    <div class="fg"><label>Categorie</label><select id="aCat">${o}</select></div>
+    <div class="fg"><label>Huidige waarde (€)</label><input id="aVal" type="number" value="${a.current_value}"></div>
+    <div class="fg"><label>Schuld / hypotheek (€)</label><input id="aDebt" type="number" value="${a.debt||0}"></div>
+    <div class="fg"><label>Notities</label><input id="aNotes" value="${a.notes||''}"></div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Annuleer</button><button class="btn btn-primary" onclick="updateAsset('${id}')">Opslaan</button></div>`;
+  document.getElementById('mOvl').classList.remove('hidden');
+}
+
+async function updateAsset(id){
+  await sb('assets','PATCH',{name:document.getElementById('aName').value.trim(),category_id:document.getElementById('aCat').value,current_value:parseFloat(document.getElementById('aVal').value)||0,debt:parseFloat(document.getElementById('aDebt').value)||0,notes:document.getElementById('aNotes').value.trim(),updated_at:new Date().toISOString()},`?id=eq.${id}`);
+  closeModal();await loadAll();showToast('Bijgewerkt','ok');
+}
+
+async function delAsset(id){if(!confirm('Verwijderen?'))return;await sb('assets','DELETE',null,`?id=eq.${id}`);await loadAll()}
+
+// Pipeline CRUD
+function showAddPipeline(type='uitstaand'){
+  document.getElementById('mCnt').innerHTML=`<h2>${type==='verwacht'?'Verwachte inkomst':'Uitstaand bedrag'} toevoegen</h2>
+    <div class="fg"><label>Naam</label><input id="pName" placeholder="bijv. Deal Goedestraat"></div>
+    <div class="fg"><label>Verwacht bedrag (€)</label><input id="pAmt" type="number" placeholder="100000"></div>
+    <div class="fg"><label>Type</label><select id="pType"><option value="uitstaand" ${type==='uitstaand'?'selected':''}>Uitstaand</option><option value="verwacht" ${type==='verwacht'?'selected':''}>Verwachte inkomst</option></select></div>
+    <div class="fg"><label>Status</label><select id="pStatus"><option value="open">Open</option><option value="in_onderhandeling">In onderhandeling</option></select></div>
+    <div class="fg"><label>Notities</label><input id="pNotes" placeholder=""></div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Annuleer</button><button class="btn btn-primary" onclick="savePipe()">Toevoegen</button></div>`;
+  document.getElementById('mOvl').classList.remove('hidden');
+}
+
+async function savePipe(){
+  const name=document.getElementById('pName').value.trim();if(!name)return;
+  await sb('pipeline','POST',{name,expected_amount:parseFloat(document.getElementById('pAmt').value)||0,type:document.getElementById('pType').value,status:document.getElementById('pStatus').value,notes:document.getElementById('pNotes').value.trim()});
+  closeModal();await loadAll();showToast('Toegevoegd','ok');
+}
+
+function editPipe(id){
+  const p=pipeline.find(x=>x.id===id);if(!p)return;
+  document.getElementById('mCnt').innerHTML=`<h2>Bewerken</h2>
+    <div class="fg"><label>Naam</label><input id="pName" value="${p.name}"></div>
+    <div class="fg"><label>Verwacht bedrag (€)</label><input id="pAmt" type="number" value="${p.expected_amount}"></div>
+    <div class="fg"><label>Type</label><select id="pType"><option value="uitstaand" ${p.type==='uitstaand'?'selected':''}>Uitstaand</option><option value="verwacht" ${p.type==='verwacht'?'selected':''}>Verwachte inkomst</option></select></div>
+    <div class="fg"><label>Status</label><select id="pStatus"><option value="open" ${p.status==='open'?'selected':''}>Open</option><option value="in_onderhandeling" ${p.status==='in_onderhandeling'?'selected':''}>In onderhandeling</option><option value="afgerond" ${p.status==='afgerond'?'selected':''}>Afgerond</option><option value="vervallen" ${p.status==='vervallen'?'selected':''}>Vervallen</option></select></div>
+    <div class="fg"><label>Notities</label><input id="pNotes" value="${p.notes||''}"></div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Annuleer</button><button class="btn btn-primary" onclick="updatePipe('${id}')">Opslaan</button></div>`;
+  document.getElementById('mOvl').classList.remove('hidden');
+}
+
+async function updatePipe(id){
+  await sb('pipeline','PATCH',{name:document.getElementById('pName').value.trim(),expected_amount:parseFloat(document.getElementById('pAmt').value)||0,type:document.getElementById('pType').value,status:document.getElementById('pStatus').value,notes:document.getElementById('pNotes').value.trim()},`?id=eq.${id}`);
+  closeModal();await loadAll();showToast('Bijgewerkt','ok');
+}
+
+async function delPipe(id){if(!confirm('Verwijderen?'))return;await sb('pipeline','DELETE',null,`?id=eq.${id}`);await loadAll()}
+
+// Asset categories
+function showAddAssetCat(){
+  document.getElementById('mCnt').innerHTML=`<h2>Vermogen categorie</h2>
+    <div class="fg"><label>Naam</label><input id="acName" placeholder="bijv. Crypto"></div>
+    <div class="fg"><label>Icoon</label><input id="acIcon" placeholder="🪙" maxlength="2"></div>
+    <div class="fg"><label>Kleur</label><input id="acColor" type="color" value="#B8763E"></div>
+    <div class="ma"><button class="btn" onclick="closeModal()">Annuleer</button><button class="btn btn-primary" onclick="saveAssetCat()">Toevoegen</button></div>`;
+  document.getElementById('mOvl').classList.remove('hidden');
+}
+
+async function saveAssetCat(){
+  const name=document.getElementById('acName').value.trim();if(!name)return;
+  await sb('asset_categories','POST',{id:name.toLowerCase().replace(/[^a-z0-9]/g,'_'),name,icon:document.getElementById('acIcon').value||'📦',color:document.getElementById('acColor').value,sort_order:assetCats.length+1});
+  closeModal();await loadAll();showToast('Categorie toegevoegd','ok');
+}
+
+// === FREEDOM ===
+function pv(id){return parseFloat((document.getElementById(id)?.value||'0').replace(',','.'))||0}
+function avgOut(type){const ms=[];for(let i=0;i<12;i++){let m=curM-i,y=curY;while(m<0){m+=12;y--}
+  const tx=transactions.filter(t=>{const d=new Date(t.date);const a=accounts.find(x=>x.id===t.account_id);return d.getMonth()===m&&d.getFullYear()===y&&t.is_debit&&t.category_id!=='intern'&&(type==='prive'?a?.type!=='zakelijk':a?.type==='zakelijk')});
+  if(tx.length)ms.push(tx.reduce((s,t)=>s+Math.abs(t.amount),0));if(ms.length>=3)break}return ms.length?ms.reduce((a,b)=>a+b,0)/ms.length:0}
+function avgIn(){const ms=[];for(let i=0;i<12;i++){let m=curM-i,y=curY;while(m<0){m+=12;y--}
+  const tx=transactions.filter(t=>{const d=new Date(t.date);const a=accounts.find(x=>x.id===t.account_id);return d.getMonth()===m&&d.getFullYear()===y&&!t.is_debit&&t.category_id!=='intern'&&a?.type==='zakelijk'});
+  if(tx.length)ms.push(tx.reduce((s,t)=>s+Math.abs(t.amount),0));if(ms.length>=3)break}return ms.length?ms.reduce((a,b)=>a+b,0)/ms.length:0}
+
+function calcF(){
+  const ap=avgOut('prive'),az=avgOut('zakelijk'),ai=avgIn();
+  if(ap>0&&document.getElementById('cPK').value==='0'){document.getElementById('cPK').value=Math.round(ap);document.getElementById('cPKh').textContent='Gemiddelde uit privé-rekeningen'}
+  if(az>0)document.getElementById('cZKa').value=Math.round(az);
+  if(ai>0)document.getElementById('cInA').value=Math.round(ai);
+
+  const pk=pv('cPK'),buf=pv('cBuf'),ext=pv('cExt'),nnM=pk+buf+ext,nnJ=nnM*12;
+  document.getElementById('cNN').textContent=fmt(nnM);
+  const zk=(pv('cZK')+pv('cZKa'))*12;
+  const bpM=pv('cHuur')+pv('cPas')+pv('cInA'),bpJ=bpM*12;
+  const v1=pv('pV1')/100,v2=pv('pV2')/100,ab=pv('pAB')/100,dga=pv('pDGA'),ib=pv('pIB')/100;
+
+  // Passief -> netto
+  const wp=Math.max(bpJ-zk,0),vpbP=wp<=200000?wp*v1:200000*v1+(wp-200000)*v2;
+  const nwP=wp-vpbP,dgaN=dga*(1-ib),vdP=Math.max(nwP-dga,0),abP=vdP*ab,divP=vdP-abP;
+  const totN=dgaN+divP,nPM=totN/12;
+
+  document.getElementById('cDown').innerHTML=`
+    <div class="bln"><span>Bruto passief</span><span class="v">${fmt(bpJ)}/jr</span></div>
+    <div class="bln ind"><span>BV-kosten</span><span class="v neg">-${fmt(zk)}</span></div>
+    <div class="bln" style="font-weight:600"><span>Winst BV</span><span class="v">${fmt(wp)}</span></div>
+    <div class="bln ind"><span>VPB</span><span class="v neg">-${fmt(vpbP)}</span></div>
+    <div class="bln"><span>Netto winst</span><span class="v">${fmt(nwP)}</span></div>
+    <div class="bln ind"><span>DGA-salaris bruto</span><span class="v neg">-${fmt(dga)}</span></div>
+    <div class="bln ind"><span>→ DGA netto</span><span class="v pos">${fmt(dgaN)}</span></div>
+    <div class="bln ind"><span>Dividend</span><span class="v">${fmt(vdP)}</span></div>
+    <div class="bln ind"><span>AB-heffing</span><span class="v neg">-${fmt(abP)}</span></div>
+    <div class="bln ind"><span>→ Dividend netto</span><span class="v pos">${fmt(divP)}</span></div>
+    <div class="bln tot"><span>Netto passief /mnd</span><span class="v ${nPM>=nnM?'pos':'acc'}">${fmt(nPM)}</span></div>`;
+
+  // Benodigd -> bruto
+  let lo=0,hi=2e6;for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(calcNet(mid,zk,v1,v2,ab,dga,ib)<nnJ)lo=mid;else hi=mid}
+  const brJ=(lo+hi)/2,brM=brJ/12;
+  const wN=Math.max(brJ-zk,0),vpbN=wN<=200000?wN*v1:200000*v1+(wN-200000)*v2;
+  document.getElementById('cUp').innerHTML=`
+    <div class="bln"><span>Netto nodig</span><span class="v">${fmt(nnJ)}/jr</span></div>
+    <div class="bln"><span>→ Bruto BV nodig</span><span class="v acc">${fmt(brJ)}/jr</span></div>
+    <div class="bln ind"><span>Zakelijke kosten</span><span class="v">${fmt(zk)}</span></div>
+    <div class="bln ind"><span>VPB</span><span class="v">${fmt(vpbN)}</span></div>
+    <div class="bln tot"><span>Per maand bruto</span><span class="v acc">${fmt(brM)}</span></div>`;
+
+  // Stats
+  const gap=nPM-nnM;
+  document.getElementById('fNeed').textContent=fmt(nnM);
+  document.getElementById('fHave').textContent=fmt(nPM);
+  document.getElementById('fGap').textContent=(gap>=0?'+ ':'')+fmt(Math.abs(gap));
+  document.getElementById('fGap').className='stat-value '+(gap>=0?'pos':'neg');
+  document.getElementById('fGapS').textContent=gap>=0?'positief /mnd':'negatief /mnd';
+  document.getElementById('fBr').textContent=fmt(brM);
+}
+function calcNet(br,zk,v1,v2,ab,dga,ib){const w=Math.max(br-zk,0),vpb=w<=200000?w*v1:200000*v1+(w-200000)*v2,nw=w-vpb;return dga*(1-ib)+Math.max(nw-dga,0)*(1-ab)}
+
+// === UTILS ===
+function updateCnts(){document.getElementById('txCnt').textContent=transactions.length;const u=transactions.filter(t=>!t.category_id).length;const b=document.getElementById('uncatBadge');if(u>0){b.textContent=u;b.classList.remove('hidden')}else b.classList.add('hidden')}
+function closeModal(){document.getElementById('mOvl').classList.add('hidden')}
+function showToast(m,t='ok'){document.querySelectorAll('.toast').forEach(x=>x.remove());const e=document.createElement('div');e.className='toast '+t;e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),4000)}
+function exportCSV(){const tx=fS(gM()),rows=[['Datum','Rekening','Type','Tegenpartij','Omschrijving','Categorie','Bedrag'].join(';')];
+  for(const t of tx){const c=categories.find(x=>x.id===t.category_id),a=accounts.find(x=>x.id===t.account_id);rows.push([t.date,a?.name||'',a?.type||'',`"${t.counterparty||''}"`,`"${t.description||''}"`,c?.name||'',t.amount.toFixed(2).replace('.',',')].join(';'))}
+  const b=new Blob([rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`lasten_${curY}_${String(curM+1).padStart(2,'0')}.csv`;a.click()}
+
+// Init
+loadAll();
+</script>
+</body>
+</html>
