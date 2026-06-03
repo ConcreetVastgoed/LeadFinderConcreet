@@ -214,7 +214,7 @@ async function loadVlakken(b){
  vlakken=[];
  try{
   // 1) bestemmingsplannen in beeld zoeken
-  const pr=await fetch('/api/rp/plannen/_zoek?planType=bestemmingsplan&pageSize=50',{method:'POST',headers,body:JSON.stringify(geo)});
+  const pr=await fetch('/api/rp/plannen/_zoek?pageSize=50',{method:'POST',headers,body:JSON.stringify(geo)});
   if(!pr.ok){setStatus('Plannen zoeken gaf '+pr.status);return;}
   const pj=await pr.json();
   const plannen=((pj._embedded&&pj._embedded.plannen)||[]).slice(0,8);
