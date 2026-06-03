@@ -123,6 +123,12 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
 /* ---------- RD <-> WGS84 ---------- */
 proj4.defs('EPSG:28992','+proj=sterea +lat_0=52.1561605555556 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.417,50.3319,465.552,-0.398957,0.343988,-1.8774,4.0725 +units=m +no_defs');
 const toRD = (lng,lat)=>proj4('EPSG:4326','EPSG:28992',[lng,lat]); // -> [x,y]
+const fromRD = (x,y)=>proj4('EPSG:28992','EPSG:4326',[x,y]);       // -> [lng,lat]
+function reproj(geom){ // RD GeoJSON -> WGS84 GeoJSON (werkt voor Point/Line/Polygon/Multi*)
+ if(!geom||!geom.coordinates)return geom;
+ const conv=co=>(typeof co[0]==='number')?fromRD(co[0],co[1]):co.map(conv);
+ return {type:geom.type,coordinates:conv(geom.coordinates)};
+}
 
 /* ---------- functie-categorieën ---------- */
 const FUNCS=[
@@ -210,14 +216,16 @@ async function loadVlakken(b){
  const c=[[b.getWest(),b.getSouth()],[b.getEast(),b.getSouth()],[b.getEast(),b.getNorth()],[b.getWest(),b.getNorth()],[b.getWest(),b.getSouth()]];
  const ring=c.map(([lng,lat])=>toRD(lng,lat));
  const geo={_geo:{intersects:{type:'Polygon',coordinates:[ring]}}};
- const headers={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:4326'};
+ const headers={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:28992'};
  vlakken=[];
  try{
   // 1) bestemmingsplannen in beeld zoeken
   const pr=await fetch('/api/rp/plannen/_zoek?pageSize=50',{method:'POST',headers,body:JSON.stringify(geo)});
   if(!pr.ok){setStatus('Plannen zoeken gaf '+pr.status);return;}
   const pj=await pr.json();
-  const plannen=((pj._embedded&&pj._embedded.plannen)||[]).slice(0,8);
+  const all=(pj._embedded&&pj._embedded.plannen)||[];
+  const bp=all.filter(p=>/bestemmingsplan|beheersverordening|inpassingsplan/i.test(p.type||''));
+  const plannen=(bp.length?bp:all).slice(0,10);
   if(!plannen.length){setStatus('Geen bestemmingsplannen in beeld.');drawVlakken();return;}
   // 2) per plan de bestemmingsvlakken mét geometrie ophalen
   for(const plan of plannen){
@@ -230,7 +238,7 @@ async function loadVlakken(b){
    const arr=(j._embedded&&j._embedded.bestemmingsvlakken)||[];
    arr.forEach(v=>{
      const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';
-     vlakken.push({props:v,naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gj:v.geometrie});
+     vlakken.push({props:v,naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gj:reproj(v.geometrie)});
    });
   }
   setStatus(vlakken.length?`${vlakken.length} bestemmingsvlak(ken) geladen`:'Geen bestemmingsvlakken gevonden.');
