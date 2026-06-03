@@ -209,22 +209,31 @@ async function loadVlakken(b){
  // bbox-polygon in RD voor de _geo-query
  const c=[[b.getWest(),b.getSouth()],[b.getEast(),b.getSouth()],[b.getEast(),b.getNorth()],[b.getWest(),b.getNorth()],[b.getWest(),b.getSouth()]];
  const ring=c.map(([lng,lat])=>toRD(lng,lat));
- const body={_geo:{intersects:{type:'Polygon',coordinates:[ring]}}};
+ const geo={_geo:{intersects:{type:'Polygon',coordinates:[ring]}}};
+ const headers={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:4326'};
  vlakken=[];
  try{
-  for(let page=1;page<=5;page++){
-   const r=await fetch(`/api/rp/bestemmingsvlakken/_zoek?pageSize=100&page=${page}`,{
-     method:'POST',headers:{'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:4326'},
-     body:JSON.stringify(body)});
-   if(!r.ok){if(page===1)setStatus('Bestemmingen: server gaf '+r.status);break;}
+  // 1) bestemmingsplannen in beeld zoeken
+  const pr=await fetch('/api/rp/plannen/_zoek?planType=bestemmingsplan&pageSize=50',{method:'POST',headers,body:JSON.stringify(geo)});
+  if(!pr.ok){setStatus('Plannen zoeken gaf '+pr.status);return;}
+  const pj=await pr.json();
+  const plannen=((pj._embedded&&pj._embedded.plannen)||[]).slice(0,8);
+  if(!plannen.length){setStatus('Geen bestemmingsplannen in beeld.');drawVlakken();return;}
+  // 2) per plan de bestemmingsvlakken mét geometrie ophalen
+  for(const plan of plannen){
+   const id=plan.id||plan.identificatie;
+   if(!id)continue;
+   const r=await fetch(`/api/rp/plannen/${encodeURIComponent(id)}/bestemmingsvlakken/_zoek?expand=geometrie&pageSize=200`,
+     {method:'POST',headers,body:JSON.stringify(geo)});
+   if(!r.ok)continue;
    const j=await r.json();
-   const arr=(j._embedded&&j._embedded.bestemmingsvlakken)||j.bestemmingsvlakken||[];
+   const arr=(j._embedded&&j._embedded.bestemmingsvlakken)||[];
    arr.forEach(v=>{
      const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';
      vlakken.push({props:v,naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gj:v.geometrie});
    });
-   if(arr.length<100)break;
   }
+  setStatus(vlakken.length?`${vlakken.length} bestemmingsvlak(ken) geladen`:'Geen bestemmingsvlakken gevonden.');
   drawVlakken();
  }catch(e){setStatus('Bestemmingen laden mislukt: '+e.message);}
 }
