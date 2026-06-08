@@ -147,9 +147,7 @@ let selectedBes=new Set(); // lowercase namen
 let besInit=false;
 function matchesTargets(naam){ return selectedBes.has((naam||'').toLowerCase()); }
 function buildBesList(){
- const m=new Map(); // lowercase -> weergavenaam
- [...vlakken,...aanduidingen].forEach(x=>{ if(x.naam){const k=x.naam.toLowerCase(); if(!m.has(k))m.set(k,x.naam);} });
- const entries=[...m.entries()].sort((a,b)=>a[1].localeCompare(b[1],'nl'));
+ const entries=[...allNames.entries()].sort((a,b)=>a[1].localeCompare(b[1],'nl'));
  if(!besInit){ entries.forEach(([k])=>{ if(k.includes('won')&&!k.includes('uitgesloten'))selectedBes.add(k); }); besInit=true; }
  const box=document.getElementById('beslist');
  if(!entries.length){box.innerHTML='<div class="empty" style="font-size:12.5px">Zoom in — de bestemmingen in beeld verschijnen hier.</div>';return;}
@@ -159,7 +157,7 @@ function buildBesList(){
    const col=besColor[besGroep(disp)]||'#cfc6bb';
    const el=document.createElement('label'); el.className='fn'+(checked?'':' off');
    el.innerHTML=`<input type="checkbox" ${checked?'checked':''}><span class="swatch" style="background:${col}"></span><span class="lbl">${disp}</span><span class="dot"></span>`;
-   el.querySelector('input').addEventListener('change',e=>{ if(e.target.checked)selectedBes.add(k); else selectedBes.delete(k); el.classList.toggle('off',!e.target.checked); recompute(); });
+   el.querySelector('input').addEventListener('change',e=>{ if(e.target.checked)selectedBes.add(k); else selectedBes.delete(k); el.classList.toggle('off',!e.target.checked); renderSelected(); });
    box.appendChild(el);
  });
 }
@@ -176,8 +174,11 @@ const kadLayer=L.tileLayer.wms('https://service.pdok.nl/kadaster/kadastralekaart
 const map=L.map('map',{layers:[bases.brt]}).setView([52.3545,4.8920],16); // De Pijp
 let bagGeo=null, vlakGeo=null, aandGeo=null;
 let panden=[];        // {layer, props, gebruik[], center:[lng,lat]}
-let vlakken=[];       // {props, naam, groep, gj}  (enkelbestemmingen)
-let aanduidingen=[];  // {props, naam, groep, gj}  (functieaanduidingen)
+let vlakken=[];       // ALLEEN aangevinkte enkelbestemmingen in beeld {naam, groep, gj}
+let aanduidingen=[];  // ALLEEN aangevinkte functieaanduidingen in beeld
+let planIds=[];       // bestemmingsplan-id's in beeld
+let allNames=new Map();        // lowercase -> weergavenaam (alle bestemmingen in beeld, voor de lijst)
+const geomCache={};   // planId -> {bv:[{naam,groep,gjRaw,gj}], fa:[...]}  (ruwe geometrie, 1x opgehaald)
 
 /* ---------- functie-UI ---------- */
 const fnlist=document.getElementById('fnlist');
@@ -227,70 +228,87 @@ async function loadPanden(b){
  }catch(e){setStatus('BAG laden mislukt: '+e.message);}
 }
 
-async function loadVlakken(b){
- if(!document.getElementById('t-vlak').checked || !window.RP_ENABLED){[vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});vlakGeo=aandGeo=null;vlakken=[];aanduidingen=[];return;}
- // bbox-polygon in RD voor de _geo-query
+function bboxGeo(){
+ const b=map.getBounds();
  const c=[[b.getWest(),b.getSouth()],[b.getEast(),b.getSouth()],[b.getEast(),b.getNorth()],[b.getWest(),b.getNorth()],[b.getWest(),b.getSouth()]];
  const ring=c.map(([lng,lat])=>toRD(lng,lat));
- const geo={_geo:{intersects:{type:'Polygon',coordinates:[ring]}}};
- const headers={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:28992'};
- vlakken=[]; aanduidingen=[];
- const fetchColl=async(id,coll)=>{
-   try{
-     const r=await fetch(`/api/rp/plannen/${encodeURIComponent(id)}/${coll}/_zoek?expand=geometrie&pageSize=200`,
-       {method:'POST',headers,body:JSON.stringify(geo)});
-     if(!r.ok)return [];
-     const j=await r.json();
-     return (j._embedded&&j._embedded[coll])||[];
-   }catch(e){return [];}
- };
+ return {_geo:{intersects:{type:'Polygon',coordinates:[ring]}}};
+}
+const RP_HEADERS={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:28992'};
+async function rpZoek(path,withGeom){
  try{
-  // 1) bestemmingsplannen in beeld zoeken
-  const pr=await fetch('/api/rp/plannen/_zoek?pageSize=50',{method:'POST',headers,body:JSON.stringify(geo)});
-  if(!pr.ok){setStatus('Plannen zoeken gaf '+pr.status);return;}
-  const pj=await pr.json();
+   const r=await fetch(`/api/rp/${path}/_zoek?pageSize=200${withGeom?'&expand=geometrie':''}`,
+     {method:'POST',headers:RP_HEADERS,body:JSON.stringify(bboxGeo())});
+   if(!r.ok)return null;
+   return await r.json();
+ }catch(e){return null;}
+}
+
+/* stap 1: alleen NAMEN ophalen (zonder geometrie) -> vult de aanvinklijst (licht) */
+async function loadVlakken(){
+ if(!document.getElementById('t-vlak').checked || !window.RP_ENABLED){
+   [vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});vlakGeo=aandGeo=null;vlakken=[];aanduidingen=[];return;
+ }
+ try{
+  for(const k in geomCache)delete geomCache[k]; // cache geldt per kaartbeeld
+  const pj=await rpZoek('plannen',false);
+  if(!pj){setStatus('Plannen zoeken mislukt');return;}
   const all=(pj._embedded&&pj._embedded.plannen)||[];
   const bp=all.filter(p=>/bestemmingsplan|beheersverordening|inpassingsplan/i.test(p.type||''));
-  const plannen=(bp.length?bp:all).slice(0,10);
-  if(!plannen.length){setStatus('Geen bestemmingsplannen in beeld.');buildBesList();drawVlakken();drawAanduidingen();return;}
-  // 2) per plan: enkelbestemmingen + functieaanduidingen mét geometrie
-  for(const plan of plannen){
-   const id=plan.id||plan.identificatie;
-   if(!id)continue;
-   (await fetchColl(id,'bestemmingsvlakken')).forEach(v=>{
-     const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';
-     vlakken.push({props:v,naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gj:reproj(v.geometrie)});
-   });
-   (await fetchColl(id,'functieaanduidingen')).forEach(a=>{
-     const naam=a.naam||a.type||'';
-     aanduidingen.push({props:a,naam,groep:besGroep(naam),gj:reproj(a.geometrie)});
-   });
+  planIds=(bp.length?bp:all).map(p=>p.id||p.identificatie).filter(Boolean).slice(0,10);
+  allNames=new Map();
+  for(const id of planIds){
+   for(const coll of ['bestemmingsvlakken','functieaanduidingen']){
+     const j=await rpZoek(`plannen/${encodeURIComponent(id)}/${coll}`,false);
+     const arr=(j&&j._embedded&&j._embedded[coll])||[];
+     arr.forEach(o=>{const naam=o.naam||o.bestemmingshoofdgroep||o.type||''; if(naam){const k=naam.toLowerCase(); if(!allNames.has(k))allNames.set(k,naam);}});
+   }
   }
-  setStatus(`${vlakken.length} bestemmingsvlak(ken), ${aanduidingen.length} aanduiding(en) geladen`);
-  buildBesList(); drawVlakken(); drawAanduidingen();
+  buildBesList();
+  await renderSelected();
  }catch(e){setStatus('Bestemmingen laden mislukt: '+e.message);}
+}
+
+/* stap 2: alleen de AANGEVINKTE bestemmingen: geometrie ophalen (1x gecachet), tekenen + treffers */
+async function renderSelected(){
+ vlakken=[]; aanduidingen=[];
+ if(!document.getElementById('t-vlak').checked || !window.RP_ENABLED){
+   [vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});vlakGeo=aandGeo=null;recompute();return;
+ }
+ if(selectedBes.size){
+  for(const id of planIds){
+   if(!geomCache[id]){
+     const bvj=await rpZoek(`plannen/${encodeURIComponent(id)}/bestemmingsvlakken`,true);
+     const faj=await rpZoek(`plannen/${encodeURIComponent(id)}/functieaanduidingen`,true);
+     geomCache[id]={
+       bv:(((bvj&&bvj._embedded&&bvj._embedded.bestemmingsvlakken)||[]).map(v=>{const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gjRaw:v.geometrie,gj:null};})),
+       fa:(((faj&&faj._embedded&&faj._embedded.functieaanduidingen)||[]).map(a=>{const naam=a.naam||a.type||'';return {naam,groep:besGroep(naam),gjRaw:a.geometrie,gj:null};}))
+     };
+   }
+   const ch=geomCache[id];
+   ch.bv.forEach(o=>{ if(selectedBes.has((o.naam||'').toLowerCase())){ if(!o.gj)o.gj=reproj(o.gjRaw); vlakken.push(o);} });
+   ch.fa.forEach(o=>{ if(selectedBes.has((o.naam||'').toLowerCase())){ if(!o.gj)o.gj=reproj(o.gjRaw); aanduidingen.push(o);} });
+  }
+ }
+ setStatus(`${allNames.size} bestemming(en) in beeld · ${vlakken.length+aanduidingen.length} vlak(ken) getekend`);
+ drawVlakken(); drawAanduidingen(); recompute();
 }
 
 function drawVlakken(){
  if(vlakGeo)map.removeLayer(vlakGeo);
- const feats={type:'FeatureCollection',features:vlakken.filter(v=>v.gj).map(v=>({type:'Feature',geometry:v.gj,properties:{naam:v.naam,groep:v.groep}}))};
- vlakGeo=L.geoJSON(feats,{style:f=>{
-   const isT=matchesTargets(f.properties.naam,f.properties.groep);
-   const col=besColor[f.properties.groep]||'#cfc6bb';
-   return {color:isT?'#a9594c':col,weight:isT?2:.5,fillColor:col,fillOpacity:isT?.38:.18};
- }}).addTo(map);
+ if(!vlakken.length)return;
+ const feats={type:'FeatureCollection',features:vlakken.filter(v=>v.gj).map(v=>({type:'Feature',geometry:v.gj,properties:{groep:v.groep}}))};
+ vlakGeo=L.geoJSON(feats,{style:f=>{const col=besColor[f.properties.groep]||'#cfc6bb';return {color:'#a9594c',weight:1.5,fillColor:col,fillOpacity:.4};}}).addTo(map);
  vlakGeo.bringToBack(); bases[document.getElementById('base').value].bringToBack();
 }
 function drawAanduidingen(){
  if(aandGeo)map.removeLayer(aandGeo);
- const feats={type:'FeatureCollection',features:aanduidingen.filter(a=>a.gj).map(a=>({type:'Feature',geometry:a.gj,properties:{naam:a.naam,groep:a.groep}}))};
- aandGeo=L.geoJSON(feats,{style:f=>{
-   const isT=matchesTargets(f.properties.naam,f.properties.groep);
-   return {color:isT?'#7a2d22':'#9c8f80',weight:isT?2:1,dashArray:'4 3',fill:false,opacity:isT?1:.6};
- }}).addTo(map);
+ if(!aanduidingen.length)return;
+ const feats={type:'FeatureCollection',features:aanduidingen.filter(a=>a.gj).map(a=>({type:'Feature',geometry:a.gj,properties:{}}))};
+ aandGeo=L.geoJSON(feats,{style:()=>({color:'#7a2d22',weight:2,dashArray:'4 3',fill:false,opacity:1})}).addTo(map);
 }
 
-/* ---------- treffers berekenen (spatial join, lokaal) ---------- */
+/* ---------- treffers berekenen (spatial join, lokaal — alleen tegen aangevinkte) ---------- */
 function recompute(){
  const sel=selectedFuncs();
  let hits=0;
@@ -298,27 +316,12 @@ function recompute(){
    r.hit=false; r.bestemming=null; r.aanduiding=null;
    const fnMatch=r.gebruik.find(g=>sel.includes(g));
    if(fnMatch){
-     // onderliggende bestemming bepalen + check op doelbestemming
-     for(const v of vlakken){
-       if(!v.gj)continue;
-       let inside=false; try{inside=turf.booleanPointInPolygon(r.center,v.gj);}catch(e){}
-       if(inside){
-         if(!r.bestemming)r.bestemming=v.naam;
-         if(matchesTargets(v.naam,v.groep)){r.hit=true;r.bestemming=v.naam;break;}
-       }
-     }
-     // functieaanduiding die de doelbestemming dekt (bv. Bedrijf mét aanduiding 'wonen')
-     for(const a of aanduidingen){
-       if(!a.gj||!matchesTargets(a.naam,a.groep))continue;
-       let inside=false; try{inside=turf.booleanPointInPolygon(r.center,a.gj);}catch(e){}
-       if(inside){r.hit=true;r.aanduiding=a.naam;break;}
-     }
+     for(const v of vlakken){ if(!v.gj)continue; let ins=false; try{ins=turf.booleanPointInPolygon(r.center,v.gj);}catch(e){} if(ins){r.hit=true;r.bestemming=v.naam;break;} }
+     if(!r.hit){ for(const a of aanduidingen){ if(!a.gj)continue; let ins=false; try{ins=turf.booleanPointInPolygon(r.center,a.gj);}catch(e){} if(ins){r.hit=true;r.aanduiding=a.naam;break;} } }
      if(r.hit)hits++;
    }
    styleP(r,fnMatch);
  });
- if(vlakGeo)drawVlakken();
- if(aandGeo)drawAanduidingen();
  document.getElementById('hitline').textContent = hits? `${hits} treffer(s) in beeld` : '';
 }
 function styleP(r,fnMatch){
