@@ -1,417 +1,421 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Aankoop overzicht — Concreet Vastgoed</title>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concreet · Bestemmingsradar</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
---bg:#FAF5F0;--surface:#FFFFFF;--surface2:#F2E6D9;--text:#70899D;--text2:#8BA49F;--text3:#a8b8b3;
---accent:#C36C5E;--accent-light:#faf0ee;--accent-dark:#a95a4e;
---border:rgba(112,137,157,0.15);--border2:rgba(112,137,157,0.25);
---danger:#C36C5E;--danger-bg:#faf0ee;
---green:#8BA49F;--green-bg:#edf3f1;
---orange:#C9882C;--orange-bg:rgba(201,136,44,.08);
---radius:10px;--radius-lg:14px;
---sidebar-w:380px;
-}
-body{font-family:'Titillium Web',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;min-height:100vh}
-::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-.app{display:flex;min-height:100vh}
-
-/* SIDEBAR */
-.sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
-.sidebar-header{padding:18px 18px 14px;border-bottom:1px solid var(--border)}
-.sidebar-logo{font-family:'Instrument Serif',serif;font-size:22px;color:var(--accent);font-weight:400}
-.sidebar-sub{font-size:11px;color:var(--text2);margin-top:2px}
-.sidebar-actions{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px}
-.sidebar-actions input{flex:1;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:inherit;background:var(--bg);color:#5a7485}
-.sidebar-actions input:focus{outline:none;border-color:var(--accent)}
-.btn-new{padding:8px 14px;border:none;border-radius:var(--radius);font-size:13px;font-family:inherit;font-weight:600;cursor:pointer;background:#70899D;color:#fff;transition:background .15s;white-space:nowrap}
-.btn-new:hover{background:#5a7485}
-
-/* Checklist overview in sidebar */
-.sidebar-list{flex:1;overflow-y:auto;padding:6px 0}
-.sidebar-item{padding:12px 18px;cursor:pointer;border-left:3px solid transparent;transition:all .15s}
-.sidebar-item:hover{background:var(--surface2)}
-.sidebar-item.active{background:var(--surface2);border-left-color:var(--accent)}
-.sidebar-item .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.sidebar-item .name{font-size:14px;font-weight:600;color:#5a7485}
-.sidebar-item .price{font-size:13px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
-.sidebar-item .checklist{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
-.check-dot{font-size:11px;font-weight:600}
-.check-dot.ok{color:var(--green)}
-.check-dot.nok{color:var(--danger)}
-
-.sidebar-footer{padding:12px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--text3)}
-
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column;height:100vh}
-.main-bar{padding:14px 2rem;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:space-between;min-height:56px}
-.main-bar .title{font-family:'Instrument Serif',serif;font-size:20px;color:#5a7485;font-weight:400}
-.main-bar .actions{display:flex;gap:8px}
-.btn{padding:7px 16px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;font-family:inherit;cursor:pointer;background:var(--surface);color:var(--text);transition:all .15s;font-weight:600}
-.btn:hover{background:var(--surface2)}
-.btn-primary{background:#70899D;border-color:#70899D;color:#fff}.btn-primary:hover{background:#5a7485}
-.btn-danger{color:var(--accent);border-color:var(--accent)}.btn-danger:hover{background:var(--accent-light)}
-.btn-sm{padding:4px 10px;font-size:11px}
-
-.main-content{flex:1;overflow-y:auto;padding:1.5rem 2rem 3rem}
-.main-empty{display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:15px}
-
-/* DETAIL */
-.section-title{font-family:'Instrument Serif',serif;font-size:16px;font-weight:400;color:#5a7485;margin-bottom:.75rem;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.detail-block{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1rem}
-.detail-block .bh{padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Instrument Serif',serif;font-size:15px;color:#5a7485;display:flex;align-items:center;justify-content:space-between}
-.detail-block .bb{padding:16px 18px}
-.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.field label{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;font-weight:700;margin-bottom:3px}
-.field .val{font-size:14px;color:#5a7485}.field .val.empty{color:var(--text3);font-style:italic}
-.field .val.money{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
-
-.indicator{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);margin-bottom:6px;font-size:13px}
-.indicator .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.indicator.ok{background:var(--green-bg);color:var(--green)}.indicator.ok .dot{background:var(--green)}
-.indicator.warn{background:var(--orange-bg);color:var(--orange)}.indicator.warn .dot{background:var(--orange)}
-.indicator.bad{background:var(--danger-bg);color:var(--danger)}.indicator.bad .dot{background:var(--danger)}
-.indicator.neutral{background:var(--surface2);color:var(--text3)}.indicator.neutral .dot{background:var(--text3)}
-
-/* Financiering cards */
-.fin-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:8px}
-.fin-card .fin-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.fin-card .fin-bank{font-weight:600;color:#5a7485;font-size:14px}
-.fin-card .fin-status{font-size:10px;font-weight:700;text-transform:uppercase;padding:3px 8px;border-radius:20px}
-.fin-card .fin-status.niet_gestart{background:var(--surface2);color:var(--text3)}
-.fin-card .fin-status.aangevraagd{background:var(--orange-bg);color:var(--orange)}
-.fin-card .fin-status.toegekend{background:var(--green-bg);color:var(--green)}
-.fin-card .fin-status.afgewezen{background:var(--danger-bg);color:var(--danger)}
-
-/* MODAL */
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(90,116,133,.25);display:flex;align-items:flex-start;justify-content:center;z-index:100;backdrop-filter:blur(3px);padding-top:4vh;overflow-y:auto}
-.modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:2rem;width:600px;max-width:95vw;margin-bottom:4vh}
-.modal h2{font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;color:var(--accent);margin-bottom:1.25rem}
-.fg{margin-bottom:12px}
-.fg label{display:block;font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;font-weight:700}
-.fg input,.fg select,.fg textarea{width:100%;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--radius);font-size:14px;font-family:inherit;background:var(--bg);color:#5a7485}
-.fg textarea{min-height:50px;resize:vertical}
-.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(195,108,94,.08)}
-.fg .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fg .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.fg .row4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
-.sd{font-family:'Instrument Serif',serif;font-size:15px;color:#5a7485;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.ma{display:flex;justify-content:flex-end;gap:8px;margin-top:1.5rem}
-
-/* Fin edit blocks in form */
-.fin-edit{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;position:relative}
-.fin-edit .fin-remove{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px}
-.fin-edit .fin-remove:hover{color:var(--danger);background:var(--danger-bg)}
-.add-fin{border:1px dashed var(--border2);border-radius:var(--radius);padding:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s}
-.add-fin:hover{border-color:#70899D;background:var(--surface2);color:#70899D}
-
-.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 20px;font-size:13px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.08);animation:si .3s}
-.toast.ok{border-left:4px solid var(--green)}.toast.err{border-left:4px solid var(--danger)}
-@keyframes si{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
-.hidden{display:none!important}
-@media(max-width:768px){.app{flex-direction:column}.sidebar{width:100%;min-width:100%;height:auto;position:relative}.sidebar-list{max-height:40vh}.field-grid,.fg .row,.fg .row3,.fg .row4{grid-template-columns:1fr}}
+@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+:root{--terra:#C36C5E;--blue:#70899D;--sage:#8BA49F;--sand:#F2E6D9;--cream:#FAF5F0;--ink:#2b2520;--muted:#8a7f74;--line:#e4d8c9}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:'Titillium Web',sans-serif;color:var(--ink);background:var(--cream)}
+#app{display:grid;grid-template-columns:350px 1fr;height:100vh}
+#side{background:var(--cream);border-right:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column}
+#side header{padding:20px 20px 14px;border-bottom:1px solid var(--line)}
+#side h1{font-family:'Instrument Serif',serif;font-weight:400;font-size:30px;line-height:1;margin:0}
+#side h1 span{color:var(--terra)}
+#side .sub{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+.block{padding:15px 20px;border-bottom:1px solid var(--line)}
+.block h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 10px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.fn{display:flex;align-items:center;gap:9px;padding:4px 0;font-size:13.5px;cursor:pointer;user-select:none}
+.fn input{display:none}
+.swatch{width:13px;height:13px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.12)}
+.fn .lbl{flex:1}.fn .dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted);flex:none}
+.fn input:checked ~ .dot{background:var(--ink);border-color:var(--ink)}
+.fn.off .lbl{color:var(--muted)}
+select,input[type=text],textarea{width:100%;font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
+label.fld{font-size:12px;color:var(--muted);display:block;margin:0 0 5px}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-weight:600}
+.btn-primary{width:100%;background:var(--terra);color:#fff;padding:11px;font-size:14px;transition:.15s}
+.btn-primary:hover{background:#a9594c}.btn-primary:disabled{background:var(--muted);cursor:default}
+.btn-ghost{background:transparent;color:var(--terra);font-size:12px;padding:2px 0;text-decoration:underline}
+.toggles label{display:flex;align-items:center;gap:9px;font-size:13.5px;padding:4px 0;cursor:pointer}
+.toggles input{accent-color:var(--terra);width:16px;height:16px}
+#status{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px}
+.hitline{font-family:'Instrument Serif',serif;font-size:20px;color:var(--terra);margin-top:6px}
+.lead{border:1px solid var(--line);border-radius:9px;padding:10px 11px;margin-bottom:8px;background:#fff}
+.lead .adr{font-weight:600;font-size:13.5px;cursor:pointer}
+.lead .adr:hover{color:var(--terra)}
+.lead .meta{font-size:12px;color:var(--muted);margin-top:3px}
+.lead .meta b{color:var(--ink);font-weight:600}
+.lead .ctl{display:flex;gap:6px;margin-top:7px;align-items:center}
+.lead select{padding:5px 7px;font-size:12px;flex:1}
+.lead .del{background:none;color:var(--muted);font-size:16px;padding:0 4px}
+.empty{font-size:13px;color:var(--muted);line-height:1.5}
+#map{height:100%;width:100%}
+.leaflet-container{background:#dfe6ea;font-family:inherit}
+#hint{position:absolute;z-index:500;top:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;display:none}
+.hit{animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:.3}}
+.leaflet-popup-content-wrapper{border-radius:10px}
+.pop h3{margin:0 0 6px;font-family:'Instrument Serif',serif;font-weight:400;font-size:19px}
+.pop .row{font-size:13px;margin:3px 0}.pop .row span{color:var(--muted)}
+.pop .verdict{margin-top:8px;padding:7px 9px;border-radius:7px;font-size:13px;font-weight:600}
+.pop .hit-v{background:#fbe9e5;color:#a9594c}.pop .no-v{background:#eef2f0;color:#5f7167}
+.pop button{margin-top:8px;background:var(--blue);color:#fff;padding:7px 10px;font-size:12.5px;width:100%}
+.warn{background:#fbe9e5;color:#a9594c;font-size:12px;padding:8px 10px;border-radius:8px;margin-top:8px;display:none}
+@media(max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr}#side{max-height:46vh}}
 </style>
 </head>
 <body>
-<div class="app">
-<aside class="sidebar">
-  <div class="sidebar-header"><div class="sidebar-logo"><!-- Plak hier de <img> tag van het Concreet logo uit de DD Tool --><span style="font-family:Instrument Serif,serif;font-size:22px;color:var(--accent)">Concreet</span></div><div class="sidebar-sub">Aankoop overzicht</div></div>
-  <div class="sidebar-actions"><input type="text" placeholder="Zoeken..." id="search" oninput="render()"><button class="btn-new" onclick="showAdd()">+ Nieuw</button></div>
-  <div class="sidebar-list" id="sidebarList"></div>
-  <div class="sidebar-footer" id="footer"></div>
-</aside>
-<div class="main">
-  <div class="main-bar"><span class="title" id="mainTitle">Overzicht</span><div class="actions" id="mainActions"></div></div>
-  <div class="main-content" id="mc"><div class="main-empty">Selecteer een object of maak een nieuw object aan.</div></div>
-</div>
-</div>
-<div id="mOvl" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()"><div class="modal" id="mCnt"></div></div>
+<div id="app">
+  <aside id="side">
+    <header>
+      <h1>Bestemmings<span>radar</span></h1>
+      <div class="sub">Panden waarvan het huidige gebruik (BAG) afwijkt van de bestemming (Ruimtelijke Plannen). Kies functies + doelbestemming; treffers lichten direct op.</div>
+    </header>
 
-<script>
-const SB_URL='https://diijaerxzgimmyskrjwy.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpaWphZXJ4emdpbW15c2tyand5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0OTk0MjQsImV4cCI6MjA5MTA3NTQyNH0.XVdefN6qfv8kFKdlX-VeXjKnuvtFfaJ_wax0ndcANjY';
-const H={'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY};
-let acqs=[],activeId=null;
-
-async function sb(t,m,b,q){
-  const u=`${SB_URL}/rest/v1/${t}${q||''}`;
-  const o={method:m||'GET',headers:{...H}};
-  if(m==='GET'||!m)o.headers['Accept']='application/json';
-  if(b)o.body=JSON.stringify(b);
-  if(m==='POST'||m==='PATCH')o.headers['Prefer']='return=representation';
-  try{
-    const r=await fetch(u,o);
-    if(!r.ok){const e=await r.text();console.error(e);showToast('Fout: '+e.substring(0,120),'err');return null}
-    if(m==='DELETE')return true;return r.json();
-  }catch(e){showToast('Verbinding mislukt: '+e.message,'err');return null}
-}
-
-async function loadAll(){
-  acqs=await sb('acquisitions','GET',null,'?order=created_at.desc')||[];
-  render();
-  if(activeId){const a=acqs.find(x=>x.id===activeId);if(a)showDetail(a.id);else{activeId=null;showEmpty()}}
-}
-
-const fmt=a=>{if(!a&&a!==0)return'\u2014';return'\u20AC\u00A0'+Number(a).toLocaleString('nl-NL',{maximumFractionDigits:0})};
-const fmtD=d=>{if(!d)return'\u2014';return new Date(d+'T12:00:00').toLocaleDateString('nl-NL',{day:'numeric',month:'short',year:'numeric'})};
-const daysUntil=d=>{if(!d)return null;const n=new Date();n.setHours(0,0,0,0);return Math.ceil((new Date(d+'T12:00:00')-n)/864e5)};
-
-// === CHECKLIST LOGIC ===
-function checks(a){
-  const fins=a.financieringen||[];
-  const hasFin=fins.length>0;
-  const finOk=fins.some(f=>f.status==='toegekend');
-  return{
-    dd:a.dd_status==='afgerond',
-    lev:!!a.levering_date,
-    wb:!!a.waarborg_paid,
-    tax:!!a.taxatie_done,
-    fin:finOk
-  };
-}
-function dotHTML(ok,label){
-  return`<span class="check-dot ${ok?'ok':'nok'}">${label}</span>`;
-}
-
-// === RENDER ===
-function render(){
-  const q=(document.getElementById('search')?.value||'').toLowerCase();
-  const items=q?acqs.filter(a=>(a.name||'').toLowerCase().includes(q)):acqs;
-
-  document.getElementById('sidebarList').innerHTML=items.map(a=>{
-    const c=checks(a);
-    const price=a.purchase_price;
-    return`<div class="sidebar-item${a.id===activeId?' active':''}" onclick="showDetail('${a.id}')">
-      <div class="top"><span class="name">${a.name}</span>${price?`<span class="price">${fmt(price)}</span>`:''}</div>
-      <div class="checklist">
-        ${dotHTML(c.dd,'Due diligence')}
-        ${dotHTML(c.lev,'Levering')}
-        ${dotHTML(c.wb,'Waarborg')}
-        ${dotHTML(c.tax,'Taxatie')}
-        ${dotHTML(c.fin,'Financiering')}
-      </div>
-    </div>`;
-  }).join('')||'<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">Geen objecten</div>';
-
-  document.getElementById('footer').textContent=acqs.length+' objecten';
-}
-
-function showEmpty(){
-  document.getElementById('mainTitle').textContent='Overzicht';
-  document.getElementById('mainActions').innerHTML='';
-  document.getElementById('mc').innerHTML='<div class="main-empty">Selecteer een object of klik "+ Nieuw".</div>';
-}
-
-// === DETAIL ===
-function showDetail(id){
-  const a=acqs.find(x=>x.id===id);if(!a)return;
-  activeId=id;render();
-
-  document.getElementById('mainTitle').textContent=a.name;
-  document.getElementById('mainActions').innerHTML=`<button class="btn btn-primary" onclick="showEdit('${a.id}')">Bewerken</button><button class="btn btn-danger" onclick="delAcq('${a.id}')">Verwijderen</button>`;
-
-  const ddD=a.dd_end?daysUntil(a.dd_end):null;
-  const wbD=a.waarborg_deadline?daysUntil(a.waarborg_deadline):null;
-  const levD=a.levering_date?daysUntil(a.levering_date):null;
-  const fins=a.financieringen||[];
-
-  document.getElementById('mc').innerHTML=`
-    <div style="margin-bottom:1.5rem">
-      ${a.dd_status==='afgerond'?'<div class="indicator ok"><div class="dot"></div>DD afgerond</div>':
-        a.dd_status==='lopend'?`<div class="indicator ${ddD!==null&&ddD<0?'bad':ddD!==null&&ddD<=7?'warn':'ok'}"><div class="dot"></div>DD loopt${ddD!==null?' \u2014 '+(ddD<0?Math.abs(ddD)+' dagen over deadline':ddD+' dagen resterend'):''}</div>`:
-        '<div class="indicator neutral"><div class="dot"></div>DD niet gestart</div>'}
-      ${a.levering_date?`<div class="indicator ${levD!==null&&levD>=0&&levD<=7?'warn':'ok'}"><div class="dot"></div>Levering: ${fmtD(a.levering_date)}${levD!==null&&levD>=0?' ('+levD+' dagen)':''}</div>`:
-        '<div class="indicator neutral"><div class="dot"></div>Leveringsdatum niet bekend</div>'}
-      ${a.waarborg_paid?'<div class="indicator ok"><div class="dot"></div>Waarborg betaald</div>':
-        a.waarborg_deadline?`<div class="indicator ${wbD!==null&&wbD<0?'bad':wbD!==null&&wbD<=3?'warn':'neutral'}"><div class="dot"></div>Waarborg ${wbD!==null?(wbD<0?Math.abs(wbD)+' dagen te laat':wbD+' dagen tot deadline'):'open'}</div>`:
-        '<div class="indicator neutral"><div class="dot"></div>Waarborg niet ingesteld</div>'}
-      ${a.taxatie_done?`<div class="indicator ok"><div class="dot"></div>Taxatie: ${fmt(a.taxatie_value)}${a.taxatie_by?' door '+a.taxatie_by:''}</div>`:
-        '<div class="indicator neutral"><div class="dot"></div>Nog geen taxatie</div>'}
-      ${fins.some(f=>f.status==='toegekend')?'<div class="indicator ok"><div class="dot"></div>Financiering rond</div>':
-        fins.some(f=>f.status==='aangevraagd')?'<div class="indicator warn"><div class="dot"></div>Financiering lopend</div>':
-        '<div class="indicator neutral"><div class="dot"></div>Financiering niet gestart</div>'}
+    <div class="block">
+      <h2>1 · Huidige functie (BAG)</h2>
+      <div id="fnlist"></div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-      <div class="detail-block"><div class="bh">Object</div><div class="bb">
-        <div class="field"><label>Koopprijs</label><div class="val money">${fmt(a.purchase_price)}</div></div>
-      </div></div>
+    <div class="block">
+      <h2>2 · Doelbestemming(en)</h2>
+      <label class="fld">Bestemmingen in beeld — vink je doel(en) aan (Gemengd-1, -2 enz. apart):</label>
+      <div id="beslist"></div>
+      <div id="rpwarn" class="warn">Ruimtelijke Plannen-key niet ingesteld op de server — bestemmingen worden niet geladen.</div>
+      <div id="hitline" class="hitline"></div>
+    </div>
 
-      <div class="detail-block"><div class="bh">Due Diligence</div><div class="bb">
-        <div class="field-grid">
-          <div class="field"><label>Status</label><div class="val">${{niet_gestart:'Niet gestart',lopend:'Lopend',afgerond:'Afgerond',verlengd:'Verlengd'}[a.dd_status]||'\u2014'}</div></div>
-          <div class="field"><label>Start</label><div class="val">${fmtD(a.dd_start)}</div></div>
-          <div class="field"><label>Deadline</label><div class="val">${fmtD(a.dd_end)}</div></div>
-        </div>
-        ${a.dd_notes?`<div style="margin-top:10px;font-size:13px;color:var(--text2);white-space:pre-wrap">${a.dd_notes}</div>`:''}
-      </div></div>
+    <div class="block toggles">
+      <h2>Kaartlagen</h2>
+      <label><input type="checkbox" id="t-vlak" checked> Bestemmingsvlakken</label>
+      <label><input type="checkbox" id="t-bag" checked> BAG-panden</label>
+      <label><input type="checkbox" id="t-kad"> Kadastrale percelen</label>
+      <label class="fld" style="margin-top:8px">Ondergrond</label>
+      <select id="base">
+        <option value="brt">BRT topo (licht)</option>
+        <option value="lucht">Luchtfoto</option>
+        <option value="osm">OpenStreetMap</option>
+      </select>
+    </div>
 
-      <div class="detail-block"><div class="bh">Levering</div><div class="bb">
-        <div class="field-grid">
-          <div class="field"><label>Datum</label><div class="val">${fmtD(a.levering_date)}</div></div>
-          <div class="field"><label>Notaris</label><div class="val">${a.notaris||'\u2014'}</div></div>
-        </div>
-      </div></div>
+    <div class="block" style="flex:1">
+      <h2><span>Pijplijn <span id="leadcount" class="hitline" style="font-size:18px">0</span></span>
+        <button id="export" class="btn-ghost" style="display:none">CSV ⤓</button></h2>
+      <div id="leadlist"><div class="empty">Klik een opgelichte treffer aan en bewaar 'm hier. Leads blijven bewaard in Supabase.</div></div>
+    </div>
+    <div id="status" class="block" style="border-bottom:none"></div>
+  </aside>
 
-      <div class="detail-block"><div class="bh">Waarborg</div><div class="bb">
-        <div class="field-grid">
-          <div class="field"><label>Bedrag</label><div class="val money">${fmt(a.waarborg_amount)}</div></div>
-          <div class="field"><label>Deadline</label><div class="val">${fmtD(a.waarborg_deadline)}</div></div>
-          <div class="field"><label>Betaald</label><div class="val">${a.waarborg_paid?'<span style="color:var(--green);font-weight:700">Ja \u2713</span>':'<span style="color:var(--accent)">Nee</span>'}</div></div>
-        </div>
-      </div></div>
+  <div style="position:relative">
+    <div id="hint">Zoom verder in om data te laden</div>
+    <div id="map"></div>
+  </div>
+</div>
 
-      <div class="detail-block"><div class="bh">Taxatie</div><div class="bb">
-        <div class="field-grid">
-          <div class="field"><label>Uitgevoerd</label><div class="val">${a.taxatie_done?'<span style="color:var(--green);font-weight:700">Ja \u2713</span>':'Nee'}</div></div>
-          <div class="field"><label>Waarde</label><div class="val money">${fmt(a.taxatie_value)}</div></div>
-          <div class="field"><label>Datum</label><div class="val">${fmtD(a.taxatie_date)}</div></div>
-          <div class="field"><label>Taxateur</label><div class="val">${a.taxatie_by||'\u2014'}</div></div>
-        </div>
-      </div></div>
-
-      <div class="detail-block"><div class="bh">Financieringen <span style="font-size:12px;color:var(--text3);font-family:'Titillium Web'">${fins.length} stuks</span></div><div class="bb">
-        ${fins.length?fins.map(f=>`<div class="fin-card">
-          <div class="fin-top"><span class="fin-bank">${f.bank||'Onbekend'}</span><span class="fin-status ${f.status||'niet_gestart'}">${{niet_gestart:'Niet gestart',aangevraagd:'Aangevraagd',toegekend:'Toegekend',afgewezen:'Afgewezen'}[f.status]||f.status}</span></div>
-          <div class="field-grid">
-            <div class="field"><label>Bedrag</label><div class="val money">${fmt(f.amount)}</div></div>
-            <div class="field"><label>Rente</label><div class="val">${f.rente?f.rente+'%':'\u2014'}</div></div>
-            <div class="field"><label>Rentevast periode</label><div class="val">${fmtD(f.deadline)}</div></div>
-          </div>
-        </div>`).join(''):'<div style="color:var(--text3);font-size:13px;font-style:italic">Nog geen financieringen</div>'}
-      </div></div>
-    </div>`;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ---------- RD <-> WGS84 ---------- */
+proj4.defs('EPSG:28992','+proj=sterea +lat_0=52.1561605555556 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.417,50.3319,465.552,-0.398957,0.343988,-1.8774,4.0725 +units=m +no_defs');
+const toRD = (lng,lat)=>proj4('EPSG:4326','EPSG:28992',[lng,lat]); // -> [x,y]
+const fromRD = (x,y)=>proj4('EPSG:28992','EPSG:4326',[x,y]);       // -> [lng,lat]
+function reproj(geom){ // RD GeoJSON -> WGS84 GeoJSON (werkt voor Point/Line/Polygon/Multi*)
+ if(!geom||!geom.coordinates)return geom;
+ const conv=co=>(typeof co[0]==='number')?fromRD(co[0],co[1]):co.map(conv);
+ return {type:geom.type,coordinates:conv(geom.coordinates)};
 }
 
-// === ADD / EDIT ===
-let editFins=[];
-function showAdd(){editFins=[];showForm(null)}
-function showEdit(id){const a=acqs.find(x=>x.id===id);if(a)editFins=[...(a.financieringen||[])];showForm(a)}
+/* ---------- functie-categorieën ---------- */
+const FUNCS=[
+ {id:'industriefunctie',label:'Industrie',color:'#C36C5E',on:true},
+ {id:'kantoorfunctie',label:'Kantoor',color:'#70899D',on:true},
+ {id:'winkelfunctie',label:'Winkel',color:'#C99A5B',on:true},
+ {id:'bijeenkomstfunctie',label:'Bijeenkomst',color:'#9A7AA0',on:false},
+ {id:'logiesfunctie',label:'Logies',color:'#6FA1A8',on:false},
+ {id:'gezondheidszorgfunctie',label:'Zorg',color:'#B26B7A',on:false},
+ {id:'onderwijsfunctie',label:'Onderwijs',color:'#7E9B6A',on:false},
+ {id:'sportfunctie',label:'Sport',color:'#5F8C6E',on:false},
+ {id:'overige gebruiksfunctie',label:'Overige',color:'#9c8f80',on:false},
+ {id:'woonfunctie',label:'Wonen',color:'#8BA49F',on:false},
+];
+const fnColor={}; FUNCS.forEach(f=>fnColor[f.id]=f.color);
 
-function showForm(a){
-  const isEdit=!!a;if(!a)a={};
-  renderForm(a,isEdit);
-  document.getElementById('mOvl').classList.remove('hidden');
+/* bestemming -> kleur (IMRO-achtig) */
+const besColor={wonen:'#E9D24A',gemengd:'#C9A06B',centrum:'#D98B6B',detailhandel:'#E0A85C',
+ kantoor:'#9DB2C4',bedrijf:'#B0A8A0',bedrijventerrein:'#B0A8A0',horeca:'#D98B9C',
+ maatschappelijk:'#A99CC4',groen:'#8BA49F',verkeer:'#cfc6bb',agrarisch:'#C5CF9A'};
+function besGroep(v){v=(v||'').toLowerCase();for(const k in besColor){if(v.includes(k))return k;}return null;}
+
+/* doelbestemmingen: dynamisch, exacte namen uit het kaartbeeld (Gemengd-1, Gemengd-2, … apart) */
+let selectedBes=new Set(); // lowercase namen
+let besInit=false;
+function matchesTargets(naam){ return selectedBes.has((naam||'').toLowerCase()); }
+function buildBesList(){
+ const m=new Map(); // lowercase -> weergavenaam
+ [...vlakken,...aanduidingen].forEach(x=>{ if(x.naam){const k=x.naam.toLowerCase(); if(!m.has(k))m.set(k,x.naam);} });
+ const entries=[...m.entries()].sort((a,b)=>a[1].localeCompare(b[1],'nl'));
+ if(!besInit){ entries.forEach(([k])=>{ if(k.includes('won')&&!k.includes('uitgesloten'))selectedBes.add(k); }); besInit=true; }
+ const box=document.getElementById('beslist');
+ if(!entries.length){box.innerHTML='<div class="empty" style="font-size:12.5px">Zoom in — de bestemmingen in beeld verschijnen hier.</div>';return;}
+ box.innerHTML='';
+ entries.forEach(([k,disp])=>{
+   const checked=selectedBes.has(k);
+   const col=besColor[besGroep(disp)]||'#cfc6bb';
+   const el=document.createElement('label'); el.className='fn'+(checked?'':' off');
+   el.innerHTML=`<input type="checkbox" ${checked?'checked':''}><span class="swatch" style="background:${col}"></span><span class="lbl">${disp}</span><span class="dot"></span>`;
+   el.querySelector('input').addEventListener('change',e=>{ if(e.target.checked)selectedBes.add(k); else selectedBes.delete(k); el.classList.toggle('off',!e.target.checked); recompute(); });
+   box.appendChild(el);
+ });
 }
 
-function renderForm(a,isEdit){
-  document.getElementById('mCnt').innerHTML=`
-    <h2>${isEdit?a.name||'Bewerken':'Nieuw object'}</h2>
+/* ---------- basis & overlays ---------- */
+const bases={
+ brt:L.tileLayer('https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© PDOK / Kadaster'}),
+ lucht:L.tileLayer('https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0/Actueel_orthoHR/EPSG:3857/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© PDOK Luchtfoto'}),
+ osm:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'})
+};
+const kadLayer=L.tileLayer.wms('https://service.pdok.nl/kadaster/kadastralekaart/wms/v5_0',
+ {layers:'Perceel,KadastraleGrens',format:'image/png',transparent:true,version:'1.3.0',opacity:.9,maxZoom:19});
 
-    <div class="sd">Object</div>
-    <div class="fg"><div class="row">
-      <div><label>Projectnaam</label><input id="fName" value="${a.name||''}"></div>
-      <div><label>Koopprijs</label><input id="fBuy" type="number" value="${a.purchase_price||''}"></div>
-    </div></div>
+const map=L.map('map',{layers:[bases.brt]}).setView([52.3545,4.8920],16); // De Pijp
+let bagGeo=null, vlakGeo=null, aandGeo=null;
+let panden=[];        // {layer, props, gebruik[], center:[lng,lat]}
+let vlakken=[];       // {props, naam, groep, gj}  (enkelbestemmingen)
+let aanduidingen=[];  // {props, naam, groep, gj}  (functieaanduidingen)
 
-    <div class="sd">Due Diligence</div>
-    <div class="fg"><div class="row3">
-      <div><label>Status</label><select id="fDDs"><option value="niet_gestart" ${a.dd_status==='niet_gestart'||!a.dd_status?'selected':''}>Niet gestart</option><option value="lopend" ${a.dd_status==='lopend'?'selected':''}>Lopend</option><option value="afgerond" ${a.dd_status==='afgerond'?'selected':''}>Afgerond</option><option value="verlengd" ${a.dd_status==='verlengd'?'selected':''}>Verlengd</option></select></div>
-      <div><label>Start</label><input id="fDDstart" type="date" value="${a.dd_start||''}"></div>
-      <div><label>Deadline</label><input id="fDDend" type="date" value="${a.dd_end||''}"></div>
-    </div></div>
-    <div class="fg"><label>DD Notities</label><textarea id="fDDnotes">${a.dd_notes||''}</textarea></div>
+/* ---------- functie-UI ---------- */
+const fnlist=document.getElementById('fnlist');
+FUNCS.forEach(f=>{
+ const el=document.createElement('label');
+ el.className='fn'+(f.on?'':' off');
+ el.innerHTML=`<input type="checkbox" ${f.on?'checked':''} data-id="${f.id}">
+  <span class="swatch" style="background:${f.color}"></span><span class="lbl">${f.label}</span><span class="dot"></span>`;
+ el.querySelector('input').addEventListener('change',e=>{el.classList.toggle('off',!e.target.checked);recompute();});
+ fnlist.appendChild(el);
+});
+const selectedFuncs=()=>[...fnlist.querySelectorAll('input:checked')].map(i=>i.dataset.id);
 
-    <div class="sd">Levering</div>
-    <div class="fg"><div class="row">
-      <div><label>Leveringsdatum</label><input id="fLevDate" type="date" value="${a.levering_date||''}"></div>
-      <div><label>Notaris</label><input id="fNotaris" value="${a.notaris||''}"></div>
-    </div></div>
+/* ---------- doelbestemming-UI (dynamisch gevuld na het laden) ---------- */
+buildBesList();
 
-    <div class="sd">Waarborg</div>
-    <div class="fg"><div class="row3">
-      <div><label>Bedrag</label><input id="fWbAmt" type="number" value="${a.waarborg_amount||''}"></div>
-      <div><label>Deadline</label><input id="fWbDate" type="date" value="${a.waarborg_deadline||''}"></div>
-      <div><label>Betaald</label><select id="fWbPaid"><option value="false" ${!a.waarborg_paid?'selected':''}>Nee</option><option value="true" ${a.waarborg_paid?'selected':''}>Ja</option></select></div>
-    </div></div>
+/* ---------- data laden ---------- */
+const merc=(lat,lng)=>{const R=6378137;return [R*lng*Math.PI/180,R*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))];};
 
-    <div class="sd">Taxatie</div>
-    <div class="fg"><div class="row">
-      <div><label>Uitgevoerd</label><select id="fTaxDone"><option value="false" ${!a.taxatie_done?'selected':''}>Nee</option><option value="true" ${a.taxatie_done?'selected':''}>Ja</option></select></div>
-      <div><label>Waarde</label><input id="fTaxVal" type="number" value="${a.taxatie_value||''}"></div>
-    </div></div>
-    <div class="fg"><div class="row">
-      <div><label>Datum</label><input id="fTaxDate" type="date" value="${a.taxatie_date||''}"></div>
-      <div><label>Taxateur</label><input id="fTaxBy" value="${a.taxatie_by||''}"></div>
-    </div></div>
+async function loadAll(){
+ if(map.getZoom()<15){clearLayers();hint(true);return;}
+ hint(false);
+ const b=map.getBounds();
+ await Promise.all([loadPanden(b),loadVlakken(b)]);
+ recompute();
+}
+function clearLayers(){[bagGeo,vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});bagGeo=vlakGeo=aandGeo=null;panden=[];vlakken=[];aanduidingen=[];}
 
-    <div class="sd">Financieringen</div>
-    <div id="finsContainer"></div>
-    <div class="add-fin" onclick="addFin()">+ Financiering toevoegen</div>
-
-    <div class="ma">
-      <button class="btn" onclick="closeModal()">Annuleer</button>
-      <button class="btn btn-primary" onclick="saveAcq(${isEdit?"'"+a.id+"'":"null"})">${isEdit?'Opslaan':'Toevoegen'}</button>
-    </div>`;
-  renderFins();
+async function loadPanden(b){
+ if(!document.getElementById('t-bag').checked){if(bagGeo){map.removeLayer(bagGeo);bagGeo=null;}panden=[];return;}
+ const sw=merc(b.getSouth(),b.getWest()), ne=merc(b.getNorth(),b.getEast());
+ const url=`https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature`+
+  `&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&count=4000`+
+  `&bbox=${sw[0]},${sw[1]},${ne[0]},${ne[1]},EPSG:3857`;
+ try{
+  const gj=await (await fetch(url)).json();
+  if(bagGeo)map.removeLayer(bagGeo);
+  panden=[];
+  bagGeo=L.geoJSON(gj,{onEachFeature:(feat,layer)=>{
+    const raw=(feat.properties.gebruiksdoel||'')+'';
+    const gebruik=raw.split(/[;,]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+    const c=layer.getBounds().getCenter();
+    const rec={layer,props:feat.properties,gebruik,center:[c.lng,c.lat],hit:false,bestemming:null};
+    panden.push(rec);
+    layer.on('click',()=>openPand(rec));
+  }}).addTo(map);
+ }catch(e){setStatus('BAG laden mislukt: '+e.message);}
 }
 
-function renderFins(){
-  const c=document.getElementById('finsContainer');if(!c)return;
-  c.innerHTML=editFins.map((f,i)=>`<div class="fin-edit">
-    <button class="fin-remove" onclick="removeFin(${i})">\u00D7</button>
-    <div class="fg"><div class="row4">
-      <div><label>Bank</label><input value="${f.bank||''}" onchange="editFins[${i}].bank=this.value"></div>
-      <div><label>Bedrag</label><input type="number" value="${f.amount||''}" onchange="editFins[${i}].amount=parseFloat(this.value)||null"></div>
-      <div><label>Rente (%)</label><input type="number" step="0.01" value="${f.rente||''}" onchange="editFins[${i}].rente=parseFloat(this.value)||null"></div>
-      <div><label>Status</label><select onchange="editFins[${i}].status=this.value"><option value="niet_gestart" ${f.status==='niet_gestart'||!f.status?'selected':''}>Niet gestart</option><option value="aangevraagd" ${f.status==='aangevraagd'?'selected':''}>Aangevraagd</option><option value="toegekend" ${f.status==='toegekend'?'selected':''}>Toegekend</option><option value="afgewezen" ${f.status==='afgewezen'?'selected':''}>Afgewezen</option></select></div>
-    </div></div>
-    <div class="fg"><div class="row"><div><label>Rentevast periode</label><input type="date" value="${f.deadline||''}" onchange="editFins[${i}].deadline=this.value||null"></div><div></div></div></div>
-  </div>`).join('');
-}
-
-function addFin(){editFins.push({bank:'',amount:null,rente:null,deadline:null,status:'niet_gestart'});renderFins()}
-function removeFin(i){editFins.splice(i,1);renderFins()}
-
-async function saveAcq(id){
-  const data={
-    name:document.getElementById('fName').value.trim(),
-    purchase_price:parseFloat(document.getElementById('fBuy').value)||null,
-    dd_status:document.getElementById('fDDs').value,
-    dd_start:document.getElementById('fDDstart').value||null,
-    dd_end:document.getElementById('fDDend').value||null,
-    dd_notes:document.getElementById('fDDnotes').value.trim()||null,
-    levering_date:document.getElementById('fLevDate').value||null,
-    notaris:document.getElementById('fNotaris').value.trim()||null,
-    waarborg_amount:parseFloat(document.getElementById('fWbAmt').value)||null,
-    waarborg_deadline:document.getElementById('fWbDate').value||null,
-    waarborg_paid:document.getElementById('fWbPaid').value==='true',
-    taxatie_done:document.getElementById('fTaxDone').value==='true',
-    taxatie_value:parseFloat(document.getElementById('fTaxVal').value)||null,
-    taxatie_date:document.getElementById('fTaxDate').value||null,
-    taxatie_by:document.getElementById('fTaxBy').value.trim()||null,
-    financieringen:editFins,
-    updated_at:new Date().toISOString()
-  };
-  if(!data.name){showToast('Vul een naam in','err');return}
-  if(id){
-    const res=await sb('acquisitions','PATCH',data,`?id=eq.${id}`);
-    if(!res)return;
-    closeModal();await loadAll();showDetail(id);showToast('Bijgewerkt','ok');
-  }else{
-    const res=await sb('acquisitions','POST',data);
-    if(!res)return;
-    closeModal();await loadAll();
-    if(res&&res[0])showDetail(res[0].id);
-    showToast('Toegevoegd','ok');
+async function loadVlakken(b){
+ if(!document.getElementById('t-vlak').checked || !window.RP_ENABLED){[vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});vlakGeo=aandGeo=null;vlakken=[];aanduidingen=[];return;}
+ // bbox-polygon in RD voor de _geo-query
+ const c=[[b.getWest(),b.getSouth()],[b.getEast(),b.getSouth()],[b.getEast(),b.getNorth()],[b.getWest(),b.getNorth()],[b.getWest(),b.getSouth()]];
+ const ring=c.map(([lng,lat])=>toRD(lng,lat));
+ const geo={_geo:{intersects:{type:'Polygon',coordinates:[ring]}}};
+ const headers={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:28992'};
+ vlakken=[]; aanduidingen=[];
+ const fetchColl=async(id,coll)=>{
+   try{
+     const r=await fetch(`/api/rp/plannen/${encodeURIComponent(id)}/${coll}/_zoek?expand=geometrie&pageSize=200`,
+       {method:'POST',headers,body:JSON.stringify(geo)});
+     if(!r.ok)return [];
+     const j=await r.json();
+     return (j._embedded&&j._embedded[coll])||[];
+   }catch(e){return [];}
+ };
+ try{
+  // 1) bestemmingsplannen in beeld zoeken
+  const pr=await fetch('/api/rp/plannen/_zoek?pageSize=50',{method:'POST',headers,body:JSON.stringify(geo)});
+  if(!pr.ok){setStatus('Plannen zoeken gaf '+pr.status);return;}
+  const pj=await pr.json();
+  const all=(pj._embedded&&pj._embedded.plannen)||[];
+  const bp=all.filter(p=>/bestemmingsplan|beheersverordening|inpassingsplan/i.test(p.type||''));
+  const plannen=(bp.length?bp:all).slice(0,10);
+  if(!plannen.length){setStatus('Geen bestemmingsplannen in beeld.');buildBesList();drawVlakken();drawAanduidingen();return;}
+  // 2) per plan: enkelbestemmingen + functieaanduidingen mét geometrie
+  for(const plan of plannen){
+   const id=plan.id||plan.identificatie;
+   if(!id)continue;
+   (await fetchColl(id,'bestemmingsvlakken')).forEach(v=>{
+     const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';
+     vlakken.push({props:v,naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gj:reproj(v.geometrie)});
+   });
+   (await fetchColl(id,'functieaanduidingen')).forEach(a=>{
+     const naam=a.naam||a.type||'';
+     aanduidingen.push({props:a,naam,groep:besGroep(naam),gj:reproj(a.geometrie)});
+   });
   }
+  setStatus(`${vlakken.length} bestemmingsvlak(ken), ${aanduidingen.length} aanduiding(en) geladen`);
+  buildBesList(); drawVlakken(); drawAanduidingen();
+ }catch(e){setStatus('Bestemmingen laden mislukt: '+e.message);}
 }
 
-async function delAcq(id){
-  if(!confirm('Verwijderen?'))return;
-  await sb('acquisitions','DELETE',null,`?id=eq.${id}`);
-  activeId=null;await loadAll();showEmpty();showToast('Verwijderd','ok');
+function drawVlakken(){
+ if(vlakGeo)map.removeLayer(vlakGeo);
+ const feats={type:'FeatureCollection',features:vlakken.filter(v=>v.gj).map(v=>({type:'Feature',geometry:v.gj,properties:{naam:v.naam,groep:v.groep}}))};
+ vlakGeo=L.geoJSON(feats,{style:f=>{
+   const isT=matchesTargets(f.properties.naam,f.properties.groep);
+   const col=besColor[f.properties.groep]||'#cfc6bb';
+   return {color:isT?'#a9594c':col,weight:isT?2:.5,fillColor:col,fillOpacity:isT?.38:.18};
+ }}).addTo(map);
+ vlakGeo.bringToBack(); bases[document.getElementById('base').value].bringToBack();
+}
+function drawAanduidingen(){
+ if(aandGeo)map.removeLayer(aandGeo);
+ const feats={type:'FeatureCollection',features:aanduidingen.filter(a=>a.gj).map(a=>({type:'Feature',geometry:a.gj,properties:{naam:a.naam,groep:a.groep}}))};
+ aandGeo=L.geoJSON(feats,{style:f=>{
+   const isT=matchesTargets(f.properties.naam,f.properties.groep);
+   return {color:isT?'#7a2d22':'#9c8f80',weight:isT?2:1,dashArray:'4 3',fill:false,opacity:isT?1:.6};
+ }}).addTo(map);
 }
 
-function closeModal(){document.getElementById('mOvl').classList.add('hidden')}
-function showToast(m,t){document.querySelectorAll('.toast').forEach(x=>x.remove());const e=document.createElement('div');e.className='toast '+(t||'ok');e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),4e3)}
+/* ---------- treffers berekenen (spatial join, lokaal) ---------- */
+function recompute(){
+ const sel=selectedFuncs();
+ let hits=0;
+ panden.forEach(r=>{
+   r.hit=false; r.bestemming=null; r.aanduiding=null;
+   const fnMatch=r.gebruik.find(g=>sel.includes(g));
+   if(fnMatch){
+     // onderliggende bestemming bepalen + check op doelbestemming
+     for(const v of vlakken){
+       if(!v.gj)continue;
+       let inside=false; try{inside=turf.booleanPointInPolygon(r.center,v.gj);}catch(e){}
+       if(inside){
+         if(!r.bestemming)r.bestemming=v.naam;
+         if(matchesTargets(v.naam,v.groep)){r.hit=true;r.bestemming=v.naam;break;}
+       }
+     }
+     // functieaanduiding die de doelbestemming dekt (bv. Bedrijf mét aanduiding 'wonen')
+     for(const a of aanduidingen){
+       if(!a.gj||!matchesTargets(a.naam,a.groep))continue;
+       let inside=false; try{inside=turf.booleanPointInPolygon(r.center,a.gj);}catch(e){}
+       if(inside){r.hit=true;r.aanduiding=a.naam;break;}
+     }
+     if(r.hit)hits++;
+   }
+   styleP(r,fnMatch);
+ });
+ if(vlakGeo)drawVlakken();
+ if(aandGeo)drawAanduidingen();
+ document.getElementById('hitline').textContent = hits? `${hits} treffer(s) in beeld` : '';
+}
+function styleP(r,fnMatch){
+ if(r.hit)      r.layer.setStyle({color:'#7a2d22',weight:3,fillColor:'#C36C5E',fillOpacity:.85,className:'hit'});
+ else if(fnMatch)r.layer.setStyle({color:fnColor[fnMatch],weight:1.4,fillColor:fnColor[fnMatch],fillOpacity:.55,className:''});
+ else            r.layer.setStyle({color:'#b9ab9b',weight:.4,fillColor:'#b9ab9b',fillOpacity:.06,className:''});
+}
 
-loadAll();
+/* ---------- pand-popup ---------- */
+async function openPand(r){
+ let adres='—';
+ try{const u=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse?lat=${r.center[1]}&lon=${r.center[0]}&rows=1&type=adres&fl=weergavenaam`;
+   const j=await (await fetch(u)).json(); adres=(j.response&&j.response.docs[0]&&j.response.docs[0].weergavenaam)||'—';}catch(e){}
+ const el=document.createElement('div');el.className='pop';
+ const besTekst=(r.bestemming||'—')+(r.aanduiding?` · aanduiding: ${r.aanduiding}`:'');
+ el.innerHTML=`<h3>${adres}</h3>
+  <div class="row"><span>Gebruik:</span> ${r.gebruik.join(', ')||'onbekend'}</div>
+  <div class="row"><span>Bestemming:</span> ${besTekst}</div>
+  <div class="row"><span>Bouwjaar:</span> ${r.props.bouwjaar||'—'} · ${r.props.oppervlakte_max||r.props.oppervlakte_min||'—'} m²</div>
+  <div class="verdict ${r.hit?'hit-v':'no-v'}">${r.hit?(r.aanduiding?'⌖ Raak — bestemming met afwijkende functieaanduiding':'⌖ Raak — gebruik wijkt af van bestemming'):'Geen treffer met huidige filters'}</div>
+  <button>Bewaar als lead</button>`;
+ const btn=el.querySelector('button');
+ btn.addEventListener('click',async()=>{
+   btn.disabled=true;btn.textContent='Bewaren…';
+   await saveLead({adres,pand_id:String(r.props.identificatie||''),gebruik:r.gebruik.join(', '),
+     bestemming:besTekst,bouwjaar:r.props.bouwjaar||null,lat:r.center[1],lng:r.center[0]});
+   btn.textContent='Bewaard ✓';
+ });
+ L.popup({maxWidth:280}).setLatLng([r.center[1],r.center[0]]).setContent(el).openOn(map);
+}
+
+/* ---------- Supabase leadpijplijn ---------- */
+let sb=null;
+const STATUSES=['te benaderen','benaderd','in gesprek','afgewezen','gewonnen'];
+async function initSupabase(){
+ try{
+   const cfg=await (await fetch('/api/config')).json();
+   window.RP_ENABLED=cfg.rpEnabled;
+   if(!cfg.rpEnabled)document.getElementById('rpwarn').style.display='block';
+   if(cfg.supabaseUrl&&cfg.supabaseAnonKey){
+     sb=supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+     await loadLeads();
+   }else{setStatus('Supabase niet geconfigureerd — leads worden niet bewaard.');}
+ }catch(e){setStatus('Config laden mislukt: '+e.message);}
+}
+async function saveLead(l){
+ if(!sb){alert('Supabase niet geconfigureerd op de server.');return;}
+ const {error}=await sb.from('leads').insert([{...l,status:'te benaderen'}]);
+ if(error){alert('Opslaan mislukt: '+error.message);return;}
+ await loadLeads();
+}
+async function loadLeads(){
+ if(!sb)return;
+ const {data,error}=await sb.from('leads').select('*').order('created_at',{ascending:false});
+ if(error){setStatus('Leads laden: '+error.message);return;}
+ renderLeads(data||[]);
+}
+function renderLeads(rows){
+ document.getElementById('leadcount').textContent=rows.length;
+ document.getElementById('export').style.display=rows.length?'inline':'none';
+ window._leads=rows;
+ const list=document.getElementById('leadlist');
+ if(!rows.length){list.innerHTML='<div class="empty">Nog geen leads bewaard.</div>';return;}
+ list.innerHTML='';
+ rows.forEach(l=>{
+   const el=document.createElement('div');el.className='lead';
+   el.innerHTML=`<div class="adr">${l.adres||'—'}</div>
+     <div class="meta">Gebruik: <b>${l.gebruik||'—'}</b></div>
+     <div class="meta">Bestemming: <b>${l.bestemming||'—'}</b>${l.bouwjaar?` · ${l.bouwjaar}`:''}</div>
+     <div class="ctl"><select>${STATUSES.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>
+       <button class="del" title="Verwijder">×</button></div>`;
+   el.querySelector('.adr').addEventListener('click',()=>map.setView([l.lat,l.lng],19));
+   el.querySelector('select').addEventListener('change',async e=>{await sb.from('leads').update({status:e.target.value}).eq('id',l.id);});
+   el.querySelector('.del').addEventListener('click',async()=>{if(confirm('Lead verwijderen?')){await sb.from('leads').delete().eq('id',l.id);loadLeads();}});
+   list.appendChild(el);
+ });
+}
+document.getElementById('export').addEventListener('click',()=>{
+ const rows=[['adres','gebruik','bestemming','bouwjaar','status','lat','lng'],
+  ...(window._leads||[]).map(l=>[l.adres,l.gebruik,l.bestemming,l.bouwjaar,l.status,l.lat,l.lng])];
+ const csv=rows.map(r=>r.map(c=>`"${(c??'').toString().replace(/"/g,'""')}"`).join(';')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+ a.download='bestemmingsradar_leads.csv';a.click();
+});
+
+/* ---------- toggles ---------- */
+document.getElementById('t-vlak').addEventListener('change',()=>loadVlakken(map.getBounds()).then(recompute));
+document.getElementById('t-bag').addEventListener('change',()=>loadPanden(map.getBounds()).then(recompute));
+document.getElementById('t-kad').addEventListener('change',e=>e.target.checked?kadLayer.addTo(map):map.removeLayer(kadLayer));
+document.getElementById('base').addEventListener('change',e=>{Object.values(bases).forEach(b=>map.removeLayer(b));bases[e.target.value].addTo(map);bases[e.target.value].bringToBack();});
+
+/* ---------- helpers ---------- */
+function hint(s){document.getElementById('hint').style.display=s?'block':'none';}
+function setStatus(t){document.getElementById('status').textContent=t;}
+let t;map.on('moveend',()=>{clearTimeout(t);t=setTimeout(loadAll,400);});
+
+initSupabase().then(loadAll);
 </script>
 </body>
 </html>
