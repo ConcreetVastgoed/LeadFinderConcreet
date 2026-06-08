@@ -94,6 +94,7 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
       <label><input type="checkbox" id="t-vlak" checked> Bestemmingsvlakken</label>
       <label><input type="checkbox" id="t-bag" checked> BAG-panden</label>
       <label><input type="checkbox" id="t-kad"> Kadastrale percelen</label>
+      <label><input type="checkbox" id="t-perc"> Lege percelen op trefwoord (bouwgrond)</label>
       <label class="fld" style="margin-top:8px">Ondergrond</label>
       <select id="base">
         <option value="brt">BRT topo (licht)</option>
@@ -142,6 +143,7 @@ const FUNCS=[
  {id:'onderwijsfunctie',label:'Onderwijs',color:'#7E9B6A',on:false},
  {id:'sportfunctie',label:'Sport',color:'#5F8C6E',on:false},
  {id:'overige gebruiksfunctie',label:'Overige',color:'#9c8f80',on:false},
+ {id:'geen functie',label:'Geen functie / bijgebouw',color:'#b0a8a0',on:false},
  {id:'woonfunctie',label:'Wonen',color:'#8BA49F',on:false},
 ];
 const fnColor={}; FUNCS.forEach(f=>fnColor[f.id]=f.color);
@@ -178,6 +180,9 @@ let vlakken=[];       // keyword-match enkelbestemmingen in beeld {naam, groep, 
 let aanduidingen=[];  // keyword-match functieaanduidingen in beeld
 let planIds=[];       // bestemmingsplan-id's in beeld
 const geomCache={};   // planId -> {bv:[{naam,groep,gjRaw,gj}], fa:[...]}  (ruwe geometrie, 1x per kaartbeeld)
+let percGeo=null;     // Leaflet-laag lege percelen
+let percRaw=[];       // alle perceel-polygonen in beeld (lon/lat), 1x per kaartbeeld
+let percelen=[];      // lege percelen die op het trefwoord matchen {poly, kad}
 
 /* ---------- functie-UI ---------- */
 const fnlist=document.getElementById('fnlist');
@@ -229,8 +234,62 @@ async function loadAll(){
  const b=map.getBounds();
  await Promise.all([loadPanden(b),loadVlakken(b)]);
  recompute();
+ await fetchPercelen(b);   // ruwe percelen 1x per kaartbeeld
+ computePercelen();        // lege + trefwoord-match bepalen + tekenen
 }
-function clearLayers(){[bagGeo,vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});bagGeo=vlakGeo=aandGeo=null;panden=[];vlakken=[];aanduidingen=[];}
+function clearLayers(){[bagGeo,vlakGeo,aandGeo,percGeo].forEach(l=>{if(l)map.removeLayer(l);});bagGeo=vlakGeo=aandGeo=percGeo=null;panden=[];vlakken=[];aanduidingen=[];percRaw=[];percelen=[];}
+
+/* lege percelen (bouwgrond): perceel zonder pand dat op het trefwoord-bestemmingsvlak ligt */
+async function fetchPercelen(b){
+ percRaw=[];
+ if(!document.getElementById('t-perc').checked || map.getZoom()<16)return; // alleen ingezoomd, anders te veel
+ const url=`https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections/perceel/items`+
+   `?bbox=${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}&limit=1000&f=json`;
+ try{
+  const j=await (await fetch(url)).json();
+  percRaw=((j.features)||[]).map(f=>({poly:f.geometry,kad:(f.properties&&(f.properties.perceelnummer||f.properties.identificatieLokaalID))||''}));
+ }catch(e){}
+}
+function computePercelen(){
+ if(percGeo){map.removeLayer(percGeo);percGeo=null;}
+ percelen=[];
+ if(!document.getElementById('t-perc').checked){return;}
+ const targets=[...vlakken,...aanduidingen].filter(t=>t.gj);
+ if(!targets.length || !percRaw.length){return;}
+ percRaw.forEach(p=>{
+   if(!p.poly)return;
+   let onTarget=false;
+   for(const t of targets){ try{ if(turf.booleanIntersects(p.poly,t.gj)){onTarget=true;break;} }catch(e){} }
+   if(!onTarget)return;
+   // leeg? geen enkel pand-middelpunt binnen het perceel
+   const heeftPand=panden.some(r=>{ try{return turf.booleanPointInPolygon(r.center,p.poly);}catch(e){return false;} });
+   if(!heeftPand)percelen.push(p);
+ });
+ if(percelen.length){
+   const feats={type:'FeatureCollection',features:percelen.map(p=>({type:'Feature',geometry:p.poly,properties:{kad:p.kad}}))};
+   percGeo=L.geoJSON(feats,{style:()=>({color:'#7a2d22',weight:2,dashArray:'6 3',fillColor:'#C36C5E',fillOpacity:.3}),
+     onEachFeature:(f,layer)=>layer.on('click',()=>openPerceel(p_byLayer(f),layer))}).addTo(map);
+ }
+}
+function p_byLayer(f){ return {poly:f.geometry, kad:f.properties.kad}; }
+async function openPerceel(p,layer){
+ const c=layer.getBounds().getCenter();
+ let adres='—';
+ try{const u=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse?lat=${c.lat}&lon=${c.lng}&rows=1&type=adres&fl=weergavenaam`;
+   const j=await (await fetch(u)).json(); adres=(j.response&&j.response.docs[0]&&j.response.docs[0].weergavenaam)||'—';}catch(e){}
+ const el=document.createElement('div');el.className='pop';
+ el.innerHTML=`<h3>Leeg perceel</h3>
+  <div class="row"><span>Nabij:</span> ${adres}</div>
+  <div class="row"><span>Perceel:</span> ${p.kad||'—'}</div>
+  <div class="verdict hit-v">⌖ Bouwgrond — perceel zonder gebouw op trefwoord-bestemming</div>
+  <button>Bewaar als lead</button>`;
+ el.querySelector('button').addEventListener('click',async e=>{
+   e.target.disabled=true;e.target.textContent='Bewaren…';
+   await saveLead({adres,pand_id:p.kad||'',gebruik:'(leeg perceel)',bestemming:keywords().join(', '),bouwjaar:null,lat:c.lat,lng:c.lng});
+   e.target.textContent='Bewaard ✓';
+ });
+ L.popup({maxWidth:280}).setLatLng(c).setContent(el).openOn(map);
+}
 
 async function loadPanden(b){
  if(!document.getElementById('t-bag').checked){if(bagGeo){map.removeLayer(bagGeo);bagGeo=null;}panden=[];return;}
@@ -245,6 +304,7 @@ async function loadPanden(b){
   bagGeo=L.geoJSON(gj,{onEachFeature:(feat,layer)=>{
     const raw=(feat.properties.gebruiksdoel||'')+'';
     const gebruik=raw.split(/[;,]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+    if(!gebruik.length)gebruik.push('geen functie'); // pand zonder verblijfsobject (schuur/bijgebouw)
     const c=layer.getBounds().getCenter();
     const rec={layer,props:feat.properties,gebruik,center:[c.lng,c.lat],poly:feat.geometry,hit:false,bestemming:null};
     panden.push(rec);
@@ -306,7 +366,7 @@ function applyKeyword(){
  }
  const kw=keywords().join(', ')||'—';
  setStatus(`"${kw}": ${vlakken.length} bestemmingsvlak(ken), ${aanduidingen.length} aanduiding(en) in beeld`);
- drawVlakken(); drawAanduidingen(); recompute();
+ drawVlakken(); drawAanduidingen(); recompute(); computePercelen();
 }
 
 function drawVlakken(){
@@ -426,6 +486,7 @@ document.getElementById('export').addEventListener('click',()=>{
 document.getElementById('t-vlak').addEventListener('change',()=>loadVlakken(map.getBounds()).then(recompute));
 document.getElementById('t-bag').addEventListener('change',()=>loadPanden(map.getBounds()).then(recompute));
 document.getElementById('t-kad').addEventListener('change',e=>e.target.checked?kadLayer.addTo(map):map.removeLayer(kadLayer));
+document.getElementById('t-perc').addEventListener('change',async()=>{await fetchPercelen(map.getBounds());computePercelen();});
 document.getElementById('base').addEventListener('change',e=>{Object.values(bases).forEach(b=>map.removeLayer(b));bases[e.target.value].addTo(map);bases[e.target.value].bringToBack();});
 
 /* ---------- helpers ---------- */
