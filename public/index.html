@@ -103,6 +103,18 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
       </select>
     </div>
 
+    <div class="block">
+      <h2>Gemeente-scan (server)</h2>
+      <label class="fld">Scant de héle gemeente met je huidige functies + trefwoorden. Draait op de server; resultaten verschijnen hieronder.</label>
+      <input type="text" id="scanGem" placeholder="bv. Amsterdam">
+      <button id="scanBtn" class="btn-primary" style="margin-top:10px">Start gemeente-scan</button>
+      <div id="scanStatus" style="font-size:12px;color:var(--muted);margin-top:8px;min-height:16px"></div>
+      <div id="scanResHead" style="display:none;margin-top:8px;font-size:12px">
+        <button id="scanCsv" class="btn-ghost">CSV ⤓</button> · <button id="scanToPijp" class="btn-ghost">Alles naar pijplijn</button>
+      </div>
+      <div id="scanRes"></div>
+    </div>
+
     <div class="block" style="flex:1">
       <h2><span>Pijplijn <span id="leadcount" class="hitline" style="font-size:18px">0</span></span>
         <button id="export" class="btn-ghost" style="display:none">CSV ⤓</button></h2>
@@ -228,14 +240,18 @@ async function zoekAdres(){
 /* ---------- data laden ---------- */
 const merc=(lat,lng)=>{const R=6378137;return [R*lng*Math.PI/180,R*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))];};
 
+let loadSeq=0;
 async function loadAll(){
  if(map.getZoom()<15){clearLayers();hint(true);return;}
  hint(false);
+ const s=++loadSeq;
  const b=map.getBounds();
- await Promise.all([loadPanden(b),loadVlakken(b)]);
+ await Promise.all([loadPanden(b,s),loadVlakken(b,s)]);
+ if(s!==loadSeq)return;              // nieuwere beweging bezig -> deze ronde negeren
  recompute();
- await fetchPercelen(b);   // ruwe percelen 1x per kaartbeeld
- computePercelen();        // lege + trefwoord-match bepalen + tekenen
+ await fetchPercelen(b);
+ if(s!==loadSeq)return;
+ computePercelen();
 }
 function clearLayers(){[bagGeo,vlakGeo,aandGeo,percGeo].forEach(l=>{if(l)map.removeLayer(l);});bagGeo=vlakGeo=aandGeo=percGeo=null;panden=[];vlakken=[];aanduidingen=[];percRaw=[];percelen=[];}
 
@@ -291,14 +307,17 @@ async function openPerceel(p,layer){
  L.popup({maxWidth:280}).setLatLng(c).setContent(el).openOn(map);
 }
 
-async function loadPanden(b){
+async function loadPanden(b,s){
  if(!document.getElementById('t-bag').checked){if(bagGeo){map.removeLayer(bagGeo);bagGeo=null;}panden=[];return;}
  const sw=merc(b.getSouth(),b.getWest()), ne=merc(b.getNorth(),b.getEast());
+ const CAP=5000;
  const url=`https://service.pdok.nl/lv/bag/wfs/v2_0?service=WFS&version=2.0.0&request=GetFeature`+
-  `&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&count=4000`+
+  `&typeName=bag:pand&outputFormat=application/json&srsName=EPSG:4326&count=${CAP}`+
   `&bbox=${sw[0]},${sw[1]},${ne[0]},${ne[1]},EPSG:3857`;
  try{
   const gj=await (await fetch(url)).json();
+  if(s!==undefined&&s!==loadSeq)return;      // stale ronde -> negeren
+  window._bagTrunc = (gj.features&&gj.features.length>=CAP);
   if(bagGeo)map.removeLayer(bagGeo);
   panden=[];
   bagGeo=L.geoJSON(gj,{onEachFeature:(feat,layer)=>{
@@ -330,32 +349,39 @@ async function rpZoek(path,withGeom){
 }
 
 /* op kaartbeeld-wissel: plannen zoeken en hun geometrie 1x in de cache laden */
-async function loadVlakken(){
+async function loadVlakken(b,s){
  if(!document.getElementById('t-vlak').checked || !window.RP_ENABLED){
    [vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});vlakGeo=aandGeo=null;vlakken=[];aanduidingen=[];return;
  }
  try{
   for(const k in geomCache)delete geomCache[k]; // cache geldt per kaartbeeld
   const pj=await rpZoek('plannen',false);
+  if(s!==undefined&&s!==loadSeq)return;
   if(!pj){setStatus('Plannen zoeken mislukt');return;}
   const all=(pj._embedded&&pj._embedded.plannen)||[];
   const bp=all.filter(p=>/bestemmingsplan|beheersverordening|inpassingsplan/i.test(p.type||''));
-  planIds=(bp.length?bp:all).map(p=>p.id||p.identificatie).filter(Boolean).slice(0,10);
+  const bpIds=(bp.length?bp:all).map(p=>p.id||p.identificatie).filter(Boolean);
+  window._vlakTrunc = bpIds.length>10;
+  planIds=bpIds.slice(0,10);
   for(const id of planIds){
    const bvj=await rpZoek(`plannen/${encodeURIComponent(id)}/bestemmingsvlakken`,true);
    const faj=await rpZoek(`plannen/${encodeURIComponent(id)}/functieaanduidingen`,true);
+   if(s!==undefined&&s!==loadSeq)return;
    const emb=j=>{const e=(j&&j._embedded)||{};return e.bestemmingsvlakken||e.functieaanduidingen||Object.values(e)[0]||[];};
+   const bvArr=emb(bvj), faArr=emb(faj);
+   if(bvArr.length>=200||faArr.length>=200)window._vlakTrunc=true;
    geomCache[id]={
-     bv:emb(bvj).map(v=>{const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gjRaw:v.geometrie,gj:null};}),
-     fa:emb(faj).map(a=>{const naam=a.naam||a.type||'';return {naam,groep:besGroep(naam),gjRaw:a.geometrie,gj:null};})
+     bv:bvArr.map(v=>{const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gjRaw:v.geometrie,gj:null};}),
+     fa:faArr.map(a=>{const naam=a.naam||a.type||'';return {naam,groep:besGroep(naam),gjRaw:a.geometrie,gj:null};})
    };
   }
-  applyKeyword();
+  applyKeyword(s);
  }catch(e){setStatus('Bestemmingen laden mislukt: '+e.message);}
 }
 
 /* trefwoord-filter uit de cache (geen nieuwe API-calls) -> tekenen + treffers */
-function applyKeyword(){
+function applyKeyword(s){
+ if(s!==undefined&&s!==loadSeq)return;     // stale ronde
  vlakken=[]; aanduidingen=[];
  if(document.getElementById('t-vlak').checked && window.RP_ENABLED && keywords().length){
   for(const id of planIds){
@@ -365,7 +391,8 @@ function applyKeyword(){
   }
  }
  const kw=keywords().join(', ')||'—';
- setStatus(`"${kw}": ${vlakken.length} bestemmingsvlak(ken), ${aanduidingen.length} aanduiding(en) in beeld`);
+ const trunc=(window._bagTrunc||window._vlakTrunc)?' · ⚠ veel data — zoom in voor compleet beeld':'';
+ setStatus(`"${kw}": ${vlakken.length} bestemmingsvlak(ken), ${aanduidingen.length} aanduiding(en) in beeld${trunc}`);
  drawVlakken(); drawAanduidingen(); recompute(); computePercelen();
 }
 
@@ -428,6 +455,68 @@ async function openPand(r){
  L.popup({maxWidth:280}).setLatLng([r.center[1],r.center[0]]).setContent(el).openOn(map);
 }
 
+/* ---------- Gemeente-scan (server) ---------- */
+let scanJob=null, scanPoll=null;
+const scanStatusEl=()=>document.getElementById('scanStatus');
+function scanStatus(t){scanStatusEl().textContent=t;}
+document.getElementById('scanBtn').addEventListener('click',startGemeenteScan);
+async function startGemeenteScan(){
+ const gem=document.getElementById('scanGem').value.trim();
+ if(!gem){alert('Vul een gemeente in.');return;}
+ if(!keywords().length){alert('Vul minstens één trefwoord in (blok 2).');return;}
+ scanStatus('Starten…'); document.getElementById('scanBtn').disabled=true;
+ try{
+   const r=await fetch('/api/scan/start',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({gemeente:gem,functies:selectedFuncs(),keywords:keywords()})});
+   const j=await r.json();
+   if(!r.ok){scanStatus('Fout: '+(j.error||r.status));document.getElementById('scanBtn').disabled=false;return;}
+   scanJob=j.job_id;
+   clearInterval(scanPoll); scanPoll=setInterval(pollScan,4000); pollScan();
+ }catch(e){scanStatus('Fout: '+e.message);document.getElementById('scanBtn').disabled=false;}
+}
+async function pollScan(){
+ if(!scanJob)return;
+ try{
+   const r=await (await fetch(`/api/scan/status?job=${scanJob}`)).json();
+   scanStatus(`${r.status||''} · ${r.done_cells||0}/${r.total_cells||'?'} cellen · ${r.hits||0} treffers`);
+   if(sb){ const {data}=await sb.from('scan_resultaten').select('*').eq('job_id',scanJob).order('id',{ascending:true}); renderScan(data||[]); }
+   if(r.status==='klaar'){clearInterval(scanPoll);document.getElementById('scanBtn').disabled=false;}
+ }catch(e){}
+}
+function renderScan(rows){
+ window._scan=rows;
+ const head=document.getElementById('scanResHead'), box=document.getElementById('scanRes');
+ head.style.display=rows.length?'block':'none';
+ if(!rows.length){box.innerHTML='';return;}
+ box.innerHTML='';
+ rows.slice(0,400).forEach(l=>{
+   const el=document.createElement('div');el.className='lead';
+   el.innerHTML=`<div class="adr">${l.gebruik||'—'} → <b>${l.bestemming||'—'}</b></div>
+     <div class="meta">${l.pand_id||''}</div>`;
+   el.querySelector('.adr').style.cursor='pointer';
+   el.querySelector('.adr').addEventListener('click',()=>map.setView([l.lat,l.lng],19));
+   box.appendChild(el);
+ });
+ if(rows.length>400){const m=document.createElement('div');m.className='empty';m.textContent=`… en nog ${rows.length-400} meer (zie CSV).`;box.appendChild(m);}
+}
+function downloadCSV(filename,rows){
+ const body=rows.map(r=>r.map(c=>`"${(c??'').toString().replace(/"/g,'""')}"`).join(';')).join('\r\n');
+ const csv='\uFEFF'+'sep=;\r\n'+body; // UTF-8 BOM + Excel-scheidingsteken-hint -> nette kolommen
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=filename;a.click();
+}
+document.getElementById('scanCsv').addEventListener('click',()=>{
+ const rows=[['pand_id','gebruik','bestemming','lat','lng'],...(window._scan||[]).map(l=>[l.pand_id,l.gebruik,l.bestemming,l.lat,l.lng])];
+ downloadCSV('gemeente_scan.csv',rows);
+});
+document.getElementById('scanToPijp').addEventListener('click',async()=>{
+ if(!sb||!(window._scan||[]).length)return;
+ if(!confirm(`${window._scan.length} resultaten naar de pijplijn kopiëren?`))return;
+ const rows=window._scan.map(l=>({adres:'(scan) '+l.pand_id,pand_id:l.pand_id,gebruik:l.gebruik,bestemming:l.bestemming,lat:l.lat,lng:l.lng,status:'te benaderen'}));
+ const {error}=await sb.from('leads').insert(rows);
+ if(error){alert('Mislukt: '+error.message);return;}
+ await loadLeads();
+});
+
 /* ---------- Supabase leadpijplijn ---------- */
 let sb=null;
 const STATUSES=['te benaderen','benaderd','in gesprek','afgewezen','gewonnen'];
@@ -477,9 +566,7 @@ function renderLeads(rows){
 document.getElementById('export').addEventListener('click',()=>{
  const rows=[['adres','gebruik','bestemming','bouwjaar','status','lat','lng'],
   ...(window._leads||[]).map(l=>[l.adres,l.gebruik,l.bestemming,l.bouwjaar,l.status,l.lat,l.lng])];
- const csv=rows.map(r=>r.map(c=>`"${(c??'').toString().replace(/"/g,'""')}"`).join(';')).join('\n');
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
- a.download='bestemmingsradar_leads.csv';a.click();
+ downloadCSV('bestemmingsradar_leads.csv',rows);
 });
 
 /* ---------- toggles ---------- */
