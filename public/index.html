@@ -341,7 +341,7 @@ function bboxGeo(){
 const RP_HEADERS={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:28992'};
 async function rpZoek(path,withGeom){
  try{
-   const r=await fetch(`/api/rp/${path}/_zoek?pageSize=200${withGeom?'&expand=geometrie':''}`,
+   const r=await fetch(`/api/rp/${path}/_zoek?pageSize=300${withGeom?'&expand=geometrie':''}`,
      {method:'POST',headers:RP_HEADERS,body:JSON.stringify(bboxGeo())});
    if(!r.ok)return null;
    return await r.json();
@@ -359,17 +359,21 @@ async function loadVlakken(b,s){
   if(s!==undefined&&s!==loadSeq)return;
   if(!pj){setStatus('Plannen zoeken mislukt');return;}
   const all=(pj._embedded&&pj._embedded.plannen)||[];
-  const bp=all.filter(p=>/bestemmingsplan|beheersverordening|inpassingsplan/i.test(p.type||''));
-  const bpIds=(bp.length?bp:all).map(p=>p.id||p.identificatie).filter(Boolean);
-  window._vlakTrunc = bpIds.length>10;
-  planIds=bpIds.slice(0,10);
+  let bp=all.filter(p=>/bestemmingsplan|beheersverordening|inpassingsplan/i.test(p.type||''));
+  if(!bp.length)bp=all;
+  const isParaplu=p=>/paraplu|facet|parkeer|archeolog|cultuurhist|geluid|natuurbescherm/i.test((p.naam||'')+' '+(p.type||''));
+  bp.sort((a,b)=>(isParaplu(a)?1:0)-(isParaplu(b)?1:0)); // land-use-plannen eerst, gebiedsdekkende paraplu's achteraan
+  const bpIds=bp.map(p=>p.id||p.identificatie).filter(Boolean);
+  window._vlakTrunc = bpIds.length>15;
+  planIds=bpIds.slice(0,15);
+  const emb=j=>{const e=(j&&j._embedded)||{};return e.bestemmingsvlakken||e.functieaanduidingen||Object.values(e)[0]||[];};
   for(const id of planIds){
    const bvj=await rpZoek(`plannen/${encodeURIComponent(id)}/bestemmingsvlakken`,true);
-   const faj=await rpZoek(`plannen/${encodeURIComponent(id)}/functieaanduidingen`,true);
    if(s!==undefined&&s!==loadSeq)return;
-   const emb=j=>{const e=(j&&j._embedded)||{};return e.bestemmingsvlakken||e.functieaanduidingen||Object.values(e)[0]||[];};
-   const bvArr=emb(bvj), faArr=emb(faj);
-   if(bvArr.length>=200||faArr.length>=200)window._vlakTrunc=true;
+   const bvArr=emb(bvj);
+   let faArr=[];
+   if(bvArr.length){ const faj=await rpZoek(`plannen/${encodeURIComponent(id)}/functieaanduidingen`,true); if(s!==undefined&&s!==loadSeq)return; faArr=emb(faj); }
+   if(bvArr.length>=300||faArr.length>=300)window._vlakTrunc=true;
    geomCache[id]={
      bv:bvArr.map(v=>{const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gjRaw:v.geometrie,gj:null};}),
      fa:faArr.map(a=>{const naam=a.naam||a.type||'';return {naam,groep:besGroep(naam),gjRaw:a.geometrie,gj:null};})
