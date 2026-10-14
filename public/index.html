@@ -25,19 +25,25 @@ html,body{margin:0;height:100%;font-family:'Titillium Web',sans-serif;color:var(
 .fn input:checked ~ .dot{background:var(--ink);border-color:var(--ink)}
 .fn.off .lbl{color:var(--muted)}
 select,input[type=text],textarea{width:100%;font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
-label.fld{font-size:12px;color:var(--muted);display:block;margin:0 0 5px}
+label.fld{font-size:12px;color:var(--muted);display:block;margin:0 0 5px;line-height:1.4}
 button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-weight:600}
 .btn-primary{width:100%;background:var(--terra);color:#fff;padding:11px;font-size:14px;transition:.15s}
 .btn-primary:hover{background:#a9594c}.btn-primary:disabled{background:var(--muted);cursor:default}
 .btn-ghost{background:transparent;color:var(--terra);font-size:12px;padding:2px 0;text-decoration:underline}
+.btn-sec{background:#fff;border:1px solid var(--line);color:var(--ink);font-size:12.5px;padding:7px 11px;white-space:nowrap}
+.btn-sec:hover{border-color:var(--terra);color:var(--terra)}
 .toggles label{display:flex;align-items:center;gap:9px;font-size:13.5px;padding:4px 0;cursor:pointer}
 .toggles input{accent-color:var(--terra);width:16px;height:16px}
 #status{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px}
-#adresres{margin-top:4px}
-.adresitem{padding:7px 9px;font-size:13px;border:1px solid var(--line);border-top:none;background:#fff;cursor:pointer}
+.sugg{margin-top:4px}
+.adresitem{padding:7px 9px;font-size:13px;border:1px solid var(--line);border-top:none;background:#fff;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
 .adresitem:first-child{border-top:1px solid var(--line);border-radius:8px 8px 0 0}
 .adresitem:last-child{border-radius:0 0 8px 8px}
+.adresitem:only-child{border-radius:8px}
 .adresitem:hover{background:var(--sand)}
+.adresitem .tag{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.chip{display:none;margin-top:8px;font-size:12.5px;background:var(--sand);border-radius:8px;padding:6px 9px}
+.chip b{font-weight:600}
 .hitline{font-family:'Instrument Serif',serif;font-size:20px;color:var(--terra);margin-top:6px}
 .lead{border:1px solid var(--line);border-radius:9px;padding:10px 11px;margin-bottom:8px;background:#fff}
 .lead .adr{font-weight:600;font-size:13.5px;cursor:pointer}
@@ -48,8 +54,17 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
 .lead select{padding:5px 7px;font-size:12px;flex:1}
 .lead .del{background:none;color:var(--muted);font-size:16px;padding:0 4px}
 .empty{font-size:13px;color:var(--muted);line-height:1.5}
+.prog{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:10px;display:none}
+.prog div{height:100%;width:0;background:var(--terra);transition:width .3s}
+#scanStatus{font-size:12px;color:var(--muted);margin-top:7px;min-height:16px;line-height:1.4}
+
+#main{position:relative;min-width:0}
 #map{height:100%;width:100%}
 .leaflet-container{background:#dfe6ea;font-family:inherit}
+#tabs{position:absolute;z-index:900;top:12px;right:12px;display:flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+#tabs button{background:none;padding:6px 14px;font-size:13px;color:var(--muted);border-radius:7px}
+#tabs button.on{background:var(--ink);color:#fff}
+#tabs .cnt{font-weight:400;opacity:.8}
 #hint{position:absolute;z-index:500;top:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;display:none}
 .hit{animation:pulse 1.5s ease-in-out infinite}
 @keyframes pulse{0%,100%{stroke-opacity:1}50%{stroke-opacity:.3}}
@@ -60,7 +75,34 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
 .pop .hit-v{background:#fbe9e5;color:#a9594c}.pop .no-v{background:#eef2f0;color:#5f7167}
 .pop button{margin-top:8px;background:var(--blue);color:#fff;padding:7px 10px;font-size:12.5px;width:100%}
 .warn{background:#fbe9e5;color:#a9594c;font-size:12px;padding:8px 10px;border-radius:8px;margin-top:8px;display:none}
-@media(max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr}#side{max-height:46vh}}
+
+/* lijst */
+#lijst{position:absolute;inset:0;z-index:800;background:var(--cream);display:flex;flex-direction:column}
+#lijst[hidden]{display:none}
+.lbar{padding:16px 20px 10px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--line);padding-right:190px}
+.ltitle{font-family:'Instrument Serif',serif;font-size:28px;line-height:1}
+.lmeta{font-size:12.5px;color:var(--muted);margin-top:4px}
+.lctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line)}
+.lctl input[type=text]{width:260px;padding:7px 10px;font-size:13px}
+.lctl label{font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.lctl label input{accent-color:var(--terra)}
+.lstats{font-size:12.5px;color:var(--muted);padding:8px 20px}
+.lstats b{color:var(--ink)}
+.lwrap{flex:1;overflow:auto;padding:0 20px 20px}
+table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid var(--line)}
+th{position:sticky;top:0;background:var(--sand);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 9px;cursor:pointer;user-select:none;white-space:nowrap;z-index:1}
+th.nosort{cursor:default}
+th .arr{color:var(--terra)}
+td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top}
+tr.h td:first-child{box-shadow:inset 3px 0 0 var(--terra)}
+td.adr{font-weight:600;cursor:pointer}
+td.adr:hover{color:var(--terra)}
+td.num{text-align:right;white-space:nowrap}
+td.sm{color:var(--muted);font-size:12px}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:#fbe9e5;color:#a9594c;margin-left:6px;vertical-align:1px}
+.n{font-weight:400;color:var(--muted);font-size:12px}
+#lmore{padding:12px 0;text-align:center}
+@media(max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr}#side{max-height:46vh}.lbar{padding-right:20px;padding-top:56px}.lctl input[type=text]{width:100%}}
 </style>
 </head>
 <body>
@@ -68,12 +110,12 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
   <aside id="side">
     <header>
       <h1>Bestemmings<span>radar</span></h1>
-      <div class="sub">Panden waarvan het huidige gebruik (BAG) afwijkt van de bestemming (Ruimtelijke Plannen). Kies functies + doelbestemming; treffers lichten direct op.</div>
+      <div class="sub">Panden waarvan het huidige gebruik (BAG) afwijkt van de bestemming (Ruimtelijke Plannen). Kies functies + trefwoorden; treffers lichten op op de kaart of komen in de lijst.</div>
     </header>
 
     <div class="block">
-      <input type="text" id="adres" placeholder="Zoek adres of plaats…" autocomplete="off">
-      <div id="adresres"></div>
+      <input type="text" id="adres" placeholder="Zoek adres of plaats op de kaart…" autocomplete="off">
+      <div id="adresres" class="sugg"></div>
     </div>
 
     <div class="block">
@@ -87,6 +129,21 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
       <input type="text" id="kw" value="wonen" placeholder="bv. wonen, gemengd - 1, horeca">
       <div id="rpwarn" class="warn">Ruimtelijke Plannen-key niet ingesteld op de server — bestemmingen worden niet geladen.</div>
       <div id="hitline" class="hitline"></div>
+    </div>
+
+    <div class="block">
+      <h2>3 · Lijst-scan</h2>
+      <label class="fld">Plaats, gemeente of provincie. Scant álle objecten met de aangevinkte functies en zet ze met hun bestemming in de lijst. Trefwoorden kun je daarna nog aanpassen zonder opnieuw te scannen.</label>
+      <input type="text" id="gebied" placeholder="bv. Haarlem, gemeente Utrecht, Noord-Holland" autocomplete="off">
+      <div id="gebiedres" class="sugg"></div>
+      <div id="gebiedchip" class="chip"></div>
+      <button id="scanBtn" class="btn-primary" style="margin-top:10px">Scan gebied</button>
+      <div style="display:flex;justify-content:space-between;margin-top:6px">
+        <button id="scanView" class="btn-ghost">of: scan huidig kaartbeeld</button>
+        <button id="scanStop" class="btn-ghost" style="display:none">Stop scan</button>
+      </div>
+      <div class="prog" id="prog"><div id="progbar"></div></div>
+      <div id="scanStatus"></div>
     </div>
 
     <div class="block toggles">
@@ -103,18 +160,6 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
       </select>
     </div>
 
-    <div class="block">
-      <h2>Gemeente-scan (server)</h2>
-      <label class="fld">Scant de héle gemeente met je huidige functies + trefwoorden. Draait op de server; resultaten verschijnen hieronder.</label>
-      <input type="text" id="scanGem" placeholder="bv. Amsterdam">
-      <button id="scanBtn" class="btn-primary" style="margin-top:10px">Start gemeente-scan</button>
-      <div id="scanStatus" style="font-size:12px;color:var(--muted);margin-top:8px;min-height:16px"></div>
-      <div id="scanResHead" style="display:none;margin-top:8px;font-size:12px">
-        <button id="scanCsv" class="btn-ghost">CSV ⤓</button> · <button id="scanToPijp" class="btn-ghost">Alles naar pijplijn</button>
-      </div>
-      <div id="scanRes"></div>
-    </div>
-
     <div class="block" style="flex:1">
       <h2><span>Pijplijn <span id="leadcount" class="hitline" style="font-size:18px">0</span></span>
         <button id="export" class="btn-ghost" style="display:none">CSV ⤓</button></h2>
@@ -123,9 +168,49 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
     <div id="status" class="block" style="border-bottom:none"></div>
   </aside>
 
-  <div style="position:relative">
+  <div id="main">
+    <div id="tabs">
+      <button data-v="kaart" class="on">Kaart</button>
+      <button data-v="lijst">Lijst <span id="tabcnt" class="cnt"></span></button>
+    </div>
     <div id="hint">Zoom verder in om data te laden</div>
     <div id="map"></div>
+
+    <div id="lijst" hidden>
+      <div class="lbar">
+        <div>
+          <div class="ltitle">Lijst</div>
+          <div id="lmeta" class="lmeta">Nog geen scan. Kies links bij "Lijst-scan" een plaats, gemeente of provincie.</div>
+        </div>
+      </div>
+      <div class="lctl">
+        <input type="text" id="lzoek" placeholder="Filter op adres, plaats, bestemming…">
+        <label><input type="checkbox" id="lhits" checked> Alleen treffers</label>
+        <label><input type="checkbox" id="lpand" checked> Per pand</label>
+        <span style="flex:1"></span>
+        <button id="lmap" class="btn-sec">Toon op kaart</button>
+        <button id="lpijp" class="btn-sec">Alles → pijplijn</button>
+        <button id="lcsv" class="btn-sec">CSV ⤓</button>
+      </div>
+      <div id="lstats" class="lstats"></div>
+      <div class="lwrap">
+        <table id="ltab">
+          <thead><tr>
+            <th class="nosort" style="width:30px"><input type="checkbox" id="lall"></th>
+            <th data-k="adres">Adres</th>
+            <th data-k="postcode">Postcode</th>
+            <th data-k="plaats">Plaats</th>
+            <th data-k="gebruik">Gebruik</th>
+            <th data-k="opp">m²</th>
+            <th data-k="bestemming">Bestemming</th>
+            <th data-k="aand">Aanduiding</th>
+            <th data-k="datum">Plan</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="lmore"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -136,12 +221,33 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
 <script>
 /* ---------- RD <-> WGS84 ---------- */
 proj4.defs('EPSG:28992','+proj=sterea +lat_0=52.1561605555556 +lon_0=5.38763888888889 +k=0.9999079 +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.417,50.3319,465.552,-0.398957,0.343988,-1.8774,4.0725 +units=m +no_defs');
-const toRD = (lng,lat)=>proj4('EPSG:4326','EPSG:28992',[lng,lat]); // -> [x,y]
-const fromRD = (x,y)=>proj4('EPSG:28992','EPSG:4326',[x,y]);       // -> [lng,lat]
-function reproj(geom){ // RD GeoJSON -> WGS84 GeoJSON (werkt voor Point/Line/Polygon/Multi*)
+const toRD = (lng,lat)=>proj4('EPSG:4326','EPSG:28992',[lng,lat]);
+const fromRD = (x,y)=>proj4('EPSG:28992','EPSG:4326',[x,y]);
+function reproj(geom){
  if(!geom||!geom.coordinates)return geom;
  const conv=co=>(typeof co[0]==='number')?fromRD(co[0],co[1]):co.map(conv);
  return {type:geom.type,coordinates:conv(geom.coordinates)};
+}
+
+/* ---------- algemene helpers ---------- */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>(s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS='https://api.pdok.nl/bzk/locatieserver/search/v3_1';
+const BAG_VBO='https://api.pdok.nl/kadaster/bag/ogc/v2/collections/verblijfsobject/items';
+async function fetchJSON(url,opt={},tries=4){
+ for(let i=0;i<tries;i++){
+  try{
+   const r=await fetch(url,opt);
+   if(r.status===429||r.status>=500){await sleep(800*(i+1));continue;}
+   if(!r.ok)return null;
+   return await r.json();
+  }catch(e){ if(e.name==='AbortError')throw e; await sleep(500*(i+1)); }
+ }
+ return null;
+}
+async function pool(items,n,fn){
+ let i=0;
+ await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{ while(i<items.length){const it=items[i++];await fn(it);} }));
 }
 
 /* ---------- functie-categorieën ---------- */
@@ -158,22 +264,82 @@ const FUNCS=[
  {id:'geen functie',label:'Geen functie / bijgebouw',color:'#b0a8a0',on:false},
  {id:'woonfunctie',label:'Wonen',color:'#8BA49F',on:false},
 ];
-const fnColor={}; FUNCS.forEach(f=>fnColor[f.id]=f.color);
+const fnColor={}, fnLabel={}; FUNCS.forEach(f=>{fnColor[f.id]=f.color;fnLabel[f.id]=f.label;});
 
-/* bestemming -> kleur (IMRO-achtig) */
 const besColor={wonen:'#E9D24A',gemengd:'#C9A06B',centrum:'#D98B6B',detailhandel:'#E0A85C',
  kantoor:'#9DB2C4',bedrijf:'#B0A8A0',bedrijventerrein:'#B0A8A0',horeca:'#D98B9C',
  maatschappelijk:'#A99CC4',groen:'#8BA49F',verkeer:'#cfc6bb',agrarisch:'#C5CF9A'};
 function besGroep(v){v=(v||'').toLowerCase();for(const k in besColor){if(v.includes(k))return k;}return null;}
 
-/* trefwoorden: komma-gescheiden, matcht substring op naam van bestemming én functieaanduiding */
 const norm=s=>(s||'').toLowerCase().replace(/[\s\-_]/g,'');
 function keywords(){ return (document.getElementById('kw').value||'').split(',').map(s=>s.trim()).filter(Boolean); }
 function naamMatch(naam){
  const raw=(naam||'').toLowerCase();
- if(raw.includes('uitgesloten'))return false; // 'wonen uitgesloten' = juist niet toegestaan
+ if(raw.includes('uitgesloten'))return false;
  const n=norm(naam), ks=keywords();
  return ks.some(k=>n.includes(norm(k)));
+}
+
+/* ---------- Ruimtelijke Plannen: zoeken mét paginering ---------- */
+const RP_HEADERS={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:28992'};
+const RP_PS=100;
+const embArr=j=>{const e=(j&&j._embedded)||{};return e.plannen||e.bestemmingsvlakken||e.functieaanduidingen||Object.values(e)[0]||[];};
+async function rpZoekAll(path,body,withGeom,signal){
+ const out=[]; let prevFirst=null;
+ for(let page=1;page<=60;page++){
+  const j=await fetchJSON(`/api/rp/${path}/_zoek?page=${page}&pageSize=${RP_PS}${withGeom?'&expand=geometrie':''}`,
+    {method:'POST',headers:RP_HEADERS,body:JSON.stringify(body),signal});
+  if(!j)return page===1?null:out;
+  const arr=embArr(j);
+  if(!arr.length)break;
+  const first=arr[0].id||arr[0].identificatie||JSON.stringify(arr[0]).slice(0,80);
+  if(first===prevFirst)break;          // API negeert page -> niet eindeloos herhalen
+  prevFirst=first;
+  out.push(...arr);
+  const hasNext=!!(j._links&&j._links.next);
+  if(!hasNext&&arr.length<RP_PS)break;
+  if(j._links&&!hasNext)break;
+ }
+ return out;
+}
+const rdPolyBody=(x0,y0,x1,y1)=>({_geo:{intersects:{type:'Polygon',coordinates:[[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]]]}}});
+
+/* plan-metadata: alleen geldende land-use-plannen, nieuwste eerst */
+function planMeta(p){
+ const id=p.id||p.identificatie;
+ const status=((p.planstatusInfo&&p.planstatusInfo.planstatus)||'')+'';
+ const dstat=((p.dossier&&p.dossier.status)||'')+'';
+ const datum=((p.planstatusInfo&&p.planstatusInfo.datum)||'')+'';
+ const txt=(p.naam||'')+' '+(p.type||'');
+ return {id,naam:p.naam||id,type:p.type||'',datum,
+  paraplu:p.isParapluplan===true||/paraplu|facet|parkeer|archeolog|cultuurhist|geluid|natuurbescherm/i.test(txt),
+  landuse:/bestemmingsplan|beheersverordening|inpassingsplan|wijzigingsplan|uitwerkingsplan/i.test(p.type||''),
+  geldig:!/ontwerp|concept|voornemen/i.test(status)&&!/vervallen|afgebroken|niet in werking|voorbereiding/i.test(dstat)};
+}
+function eligiblePlans(all){
+ const metas=(all||[]).map(planMeta).filter(m=>m.id);
+ let lu=metas.filter(m=>m.landuse&&!m.paraplu);
+ if(!lu.length)lu=metas.filter(m=>!m.paraplu);
+ const g=lu.filter(m=>m.geldig); if(g.length)lu=g;
+ return lu.sort((a,b)=>b.datum.localeCompare(a.datum));
+}
+function prepVlak(v){
+ const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';
+ const g=v.geometrie||null; let bb=null; try{if(g)bb=turf.bbox(g);}catch(e){}
+ return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),g,bb,gj:null};
+}
+const inBB=(p,b)=>b&&p[0]>=b[0]&&p[0]<=b[2]&&p[1]>=b[1]&&p[1]<=b[3];
+function pip(p,g){try{return turf.booleanPointInPolygon(p,g);}catch(e){return false;}}
+const findVlak=(arr,p)=>arr.find(v=>v.g&&inBB(p,v.bb)&&pip(p,v.g));
+const aandOp=(pl,p)=>(pl.fa||[]).filter(a=>a.g&&inBB(p,a.bb)&&pip(p,a.g)).map(a=>a.naam);
+/* beslissend = bestemmingsvlak van het nieuwste geldende plan op dat punt (RD) */
+function decide(p,plans){
+ for(const pl of plans){
+  if(!pl||!pl.bv)continue;
+  const v=findVlak(pl.bv,p);
+  if(v)return {vlak:v.naam,aand:aandOp(pl,p),plan:pl.meta.naam,datum:pl.meta.datum};
+ }
+ return null;
 }
 
 /* ---------- basis & overlays ---------- */
@@ -185,16 +351,12 @@ const bases={
 const kadLayer=L.tileLayer.wms('https://service.pdok.nl/kadaster/kadastralekaart/wms/v5_0',
  {layers:'Perceel,KadastraleGrens',format:'image/png',transparent:true,version:'1.3.0',opacity:.9,maxZoom:19});
 
-const map=L.map('map',{layers:[bases.brt]}).setView([52.3545,4.8920],16); // De Pijp
+const map=L.map('map',{layers:[bases.brt]}).setView([52.3545,4.8920],16);
 let bagGeo=null, vlakGeo=null, aandGeo=null;
-let panden=[];        // {layer, props, gebruik[], center, poly}
-let vlakken=[];       // keyword-match enkelbestemmingen in beeld {naam, groep, gj}
-let aanduidingen=[];  // keyword-match functieaanduidingen in beeld
-let planIds=[];       // bestemmingsplan-id's in beeld
-const geomCache={};   // planId -> {bv:[{naam,groep,gjRaw,gj}], fa:[...]}  (ruwe geometrie, 1x per kaartbeeld)
-let percGeo=null;     // Leaflet-laag lege percelen
-let percRaw=[];       // alle perceel-polygonen in beeld (lon/lat), 1x per kaartbeeld
-let percelen=[];      // lege percelen die op het trefwoord matchen {poly, kad}
+let panden=[], vlakken=[], aanduidingen=[], planIds=[];
+const geomCache={};   // planId -> {meta, bv:[], fa:[]}
+const MAP_PLAN_CAP=25;
+let percGeo=null, percRaw=[], percelen=[];
 
 /* ---------- functie-UI ---------- */
 const fnlist=document.getElementById('fnlist');
@@ -203,43 +365,40 @@ FUNCS.forEach(f=>{
  el.className='fn'+(f.on?'':' off');
  el.innerHTML=`<input type="checkbox" ${f.on?'checked':''} data-id="${f.id}">
   <span class="swatch" style="background:${f.color}"></span><span class="lbl">${f.label}</span><span class="dot"></span>`;
- el.querySelector('input').addEventListener('change',e=>{el.classList.toggle('off',!e.target.checked);recompute();});
+ el.querySelector('input').addEventListener('change',e=>{el.classList.toggle('off',!e.target.checked);recompute();renderLijst();});
  fnlist.appendChild(el);
 });
 const selectedFuncs=()=>[...fnlist.querySelectorAll('input:checked')].map(i=>i.dataset.id);
 
-/* trefwoorden wijzigen -> alleen opnieuw filteren uit cache (geen nieuwe API-calls) */
 let kwTimer;
-document.getElementById('kw').addEventListener('input',()=>{clearTimeout(kwTimer);kwTimer=setTimeout(applyKeyword,250);});
+document.getElementById('kw').addEventListener('input',()=>{clearTimeout(kwTimer);kwTimer=setTimeout(()=>{applyKeyword();renderLijst();},250);});
 
-/* ---------- adres-zoekbalk (PDOK Locatieserver, gratis) ---------- */
+/* ---------- adres-zoekbalk (kaart) ---------- */
 const adresInput=document.getElementById('adres');
 const adresRes=document.getElementById('adresres');
 let adrTimer;
 adresInput.addEventListener('input',()=>{clearTimeout(adrTimer);adrTimer=setTimeout(zoekAdres,300);});
-document.addEventListener('click',e=>{ if(!adresInput.contains(e.target)&&!adresRes.contains(e.target))adresRes.innerHTML=''; });
+document.addEventListener('click',e=>{
+ if(!adresInput.contains(e.target)&&!adresRes.contains(e.target))adresRes.innerHTML='';
+ if(!gebiedInput.contains(e.target)&&!gebiedRes.contains(e.target))gebiedRes.innerHTML='';
+});
+const parsePt=s=>{const m=/POINT\(([-\d.]+) ([-\d.]+)\)/.exec(s||'');return m?[parseFloat(m[1]),parseFloat(m[2])]:null;};
 async function zoekAdres(){
  const q=adresInput.value.trim();
  if(q.length<3){adresRes.innerHTML='';return;}
- try{
-  const u=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=${encodeURIComponent(q)}&rows=6&fl=weergavenaam,centroide_ll&fq=type:(adres OR weg OR postcode OR woonplaats)`;
-  const j=await (await fetch(u)).json();
-  const docs=(j.response&&j.response.docs)||[];
-  adresRes.innerHTML='';
-  docs.forEach(d=>{
-   const m=/POINT\(([-\d.]+) ([-\d.]+)\)/.exec(d.centroide_ll||'');
-   if(!m)return;
-   const lng=parseFloat(m[1]), lat=parseFloat(m[2]);
-   const el=document.createElement('div'); el.className='adresitem'; el.textContent=d.weergavenaam;
-   el.addEventListener('click',()=>{ adresInput.value=d.weergavenaam; adresRes.innerHTML=''; map.setView([lat,lng],18); });
-   adresRes.appendChild(el);
-  });
- }catch(e){}
+ const j=await fetchJSON(`${LS}/free?q=${encodeURIComponent(q)}&rows=6&fl=weergavenaam,centroide_ll&fq=type:(adres OR weg OR postcode OR woonplaats)`,{},1);
+ const docs=(j&&j.response&&j.response.docs)||[];
+ adresRes.innerHTML='';
+ docs.forEach(d=>{
+  const pt=parsePt(d.centroide_ll); if(!pt)return;
+  const el=document.createElement('div'); el.className='adresitem'; el.textContent=d.weergavenaam;
+  el.addEventListener('click',()=>{ adresInput.value=d.weergavenaam; adresRes.innerHTML=''; showView('kaart'); map.setView([pt[1],pt[0]],18); });
+  adresRes.appendChild(el);
+ });
 }
 
-/* ---------- data laden ---------- */
+/* ---------- kaart: data laden ---------- */
 const merc=(lat,lng)=>{const R=6378137;return [R*lng*Math.PI/180,R*Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))];};
-
 let loadSeq=0;
 async function loadAll(){
  if(map.getZoom()<15){clearLayers();hint(true);return;}
@@ -247,7 +406,7 @@ async function loadAll(){
  const s=++loadSeq;
  const b=map.getBounds();
  await Promise.all([loadPanden(b,s),loadVlakken(b,s)]);
- if(s!==loadSeq)return;              // nieuwere beweging bezig -> deze ronde negeren
+ if(s!==loadSeq)return;
  recompute();
  await fetchPercelen(b);
  if(s!==loadSeq)return;
@@ -255,54 +414,49 @@ async function loadAll(){
 }
 function clearLayers(){[bagGeo,vlakGeo,aandGeo,percGeo].forEach(l=>{if(l)map.removeLayer(l);});bagGeo=vlakGeo=aandGeo=percGeo=null;panden=[];vlakken=[];aanduidingen=[];percRaw=[];percelen=[];}
 
-/* lege percelen (bouwgrond): perceel zonder pand dat op het trefwoord-bestemmingsvlak ligt */
 async function fetchPercelen(b){
  percRaw=[];
- if(!document.getElementById('t-perc').checked || map.getZoom()<16)return; // alleen ingezoomd, anders te veel
- const url=`https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections/perceel/items`+
-   `?bbox=${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}&limit=1000&f=json`;
- try{
-  const j=await (await fetch(url)).json();
-  percRaw=((j.features)||[]).map(f=>({poly:f.geometry,kad:(f.properties&&(f.properties.perceelnummer||f.properties.identificatieLokaalID))||''}));
- }catch(e){}
+ if(!document.getElementById('t-perc').checked || map.getZoom()<16)return;
+ const j=await fetchJSON(`https://api.pdok.nl/kadaster/brk-kadastrale-kaart/ogc/v1/collections/perceel/items?bbox=${b.getWest()},${b.getSouth()},${b.getEast()},${b.getNorth()}&limit=1000&f=json`,{},2);
+ percRaw=((j&&j.features)||[]).map(f=>({poly:f.geometry,kad:(f.properties&&(f.properties.perceelnummer||f.properties.identificatieLokaalID))||''}));
 }
 function computePercelen(){
  if(percGeo){map.removeLayer(percGeo);percGeo=null;}
  percelen=[];
- if(!document.getElementById('t-perc').checked){return;}
+ if(!document.getElementById('t-perc').checked)return;
  const targets=[...vlakken,...aanduidingen].filter(t=>t.gj);
- if(!targets.length || !percRaw.length){return;}
+ if(!targets.length||!percRaw.length)return;
  percRaw.forEach(p=>{
-   if(!p.poly)return;
-   let onTarget=false;
-   for(const t of targets){ try{ if(turf.booleanIntersects(p.poly,t.gj)){onTarget=true;break;} }catch(e){} }
-   if(!onTarget)return;
-   // leeg? geen enkel pand-middelpunt binnen het perceel
-   const heeftPand=panden.some(r=>{ try{return turf.booleanPointInPolygon(r.center,p.poly);}catch(e){return false;} });
-   if(!heeftPand)percelen.push(p);
+  if(!p.poly)return;
+  let onTarget=false;
+  for(const t of targets){ try{ if(turf.booleanIntersects(p.poly,t.gj)){onTarget=true;break;} }catch(e){} }
+  if(!onTarget)return;
+  const heeftPand=panden.some(r=>{ try{return turf.booleanPointInPolygon(r.center,p.poly);}catch(e){return false;} });
+  if(!heeftPand)percelen.push(p);
  });
  if(percelen.length){
-   const feats={type:'FeatureCollection',features:percelen.map(p=>({type:'Feature',geometry:p.poly,properties:{kad:p.kad}}))};
-   percGeo=L.geoJSON(feats,{style:()=>({color:'#7a2d22',weight:2,dashArray:'6 3',fillColor:'#C36C5E',fillOpacity:.3}),
-     onEachFeature:(f,layer)=>layer.on('click',()=>openPerceel(p_byLayer(f),layer))}).addTo(map);
+  const feats={type:'FeatureCollection',features:percelen.map(p=>({type:'Feature',geometry:p.poly,properties:{kad:p.kad}}))};
+  percGeo=L.geoJSON(feats,{style:()=>({color:'#7a2d22',weight:2,dashArray:'6 3',fillColor:'#C36C5E',fillOpacity:.3}),
+   onEachFeature:(f,layer)=>layer.on('click',()=>openPerceel({poly:f.geometry,kad:f.properties.kad},layer))}).addTo(map);
  }
 }
-function p_byLayer(f){ return {poly:f.geometry, kad:f.properties.kad}; }
+async function reverseAdres(lat,lng){
+ const j=await fetchJSON(`${LS}/reverse?lat=${lat}&lon=${lng}&rows=1&type=adres&fl=weergavenaam`,{},1);
+ return (j&&j.response&&j.response.docs[0]&&j.response.docs[0].weergavenaam)||'—';
+}
 async function openPerceel(p,layer){
  const c=layer.getBounds().getCenter();
- let adres='—';
- try{const u=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse?lat=${c.lat}&lon=${c.lng}&rows=1&type=adres&fl=weergavenaam`;
-   const j=await (await fetch(u)).json(); adres=(j.response&&j.response.docs[0]&&j.response.docs[0].weergavenaam)||'—';}catch(e){}
+ const adres=await reverseAdres(c.lat,c.lng);
  const el=document.createElement('div');el.className='pop';
  el.innerHTML=`<h3>Leeg perceel</h3>
-  <div class="row"><span>Nabij:</span> ${adres}</div>
-  <div class="row"><span>Perceel:</span> ${p.kad||'—'}</div>
+  <div class="row"><span>Nabij:</span> ${esc(adres)}</div>
+  <div class="row"><span>Perceel:</span> ${esc(p.kad||'—')}</div>
   <div class="verdict hit-v">⌖ Bouwgrond — perceel zonder gebouw op trefwoord-bestemming</div>
   <button>Bewaar als lead</button>`;
  el.querySelector('button').addEventListener('click',async e=>{
-   e.target.disabled=true;e.target.textContent='Bewaren…';
-   await saveLead({adres,pand_id:p.kad||'',gebruik:'(leeg perceel)',bestemming:keywords().join(', '),bouwjaar:null,lat:c.lat,lng:c.lng});
-   e.target.textContent='Bewaard ✓';
+  e.target.disabled=true;e.target.textContent='Bewaren…';
+  await saveLead({adres,pand_id:p.kad||'',gebruik:'(leeg perceel)',bestemming:keywords().join(', '),bouwjaar:null,lat:c.lat,lng:c.lng});
+  e.target.textContent='Bewaard ✓';
  });
  L.popup({maxWidth:280}).setLatLng(c).setContent(el).openOn(map);
 }
@@ -316,82 +470,65 @@ async function loadPanden(b,s){
   `&bbox=${sw[0]},${sw[1]},${ne[0]},${ne[1]},EPSG:3857`;
  try{
   const gj=await (await fetch(url)).json();
-  if(s!==undefined&&s!==loadSeq)return;      // stale ronde -> negeren
-  window._bagTrunc = (gj.features&&gj.features.length>=CAP);
+  if(s!==undefined&&s!==loadSeq)return;
+  window._bagTrunc=(gj.features&&gj.features.length>=CAP);
   if(bagGeo)map.removeLayer(bagGeo);
   panden=[];
   bagGeo=L.geoJSON(gj,{onEachFeature:(feat,layer)=>{
-    const raw=(feat.properties.gebruiksdoel||'')+'';
-    const gebruik=raw.split(/[;,]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
-    if(!gebruik.length)gebruik.push('geen functie'); // pand zonder verblijfsobject (schuur/bijgebouw)
-    const c=layer.getBounds().getCenter();
-    const rec={layer,props:feat.properties,gebruik,center:[c.lng,c.lat],poly:feat.geometry,hit:false,bestemming:null};
-    panden.push(rec);
-    layer.on('click',()=>openPand(rec));
+   const raw=(feat.properties.gebruiksdoel||'')+'';
+   const gebruik=raw.split(/[;,]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+   if(!gebruik.length)gebruik.push('geen functie');
+   const c=layer.getBounds().getCenter();
+   const rec={layer,props:feat.properties,gebruik,center:[c.lng,c.lat],poly:feat.geometry,hit:false,bestemming:null,rdPt:null};
+   panden.push(rec);
+   layer.on('click',()=>openPand(rec));
   }}).addTo(map);
  }catch(e){setStatus('BAG laden mislukt: '+e.message);}
 }
 
-function bboxGeo(){
+function mapBodyRD(){
  const b=map.getBounds();
- const c=[[b.getWest(),b.getSouth()],[b.getEast(),b.getSouth()],[b.getEast(),b.getNorth()],[b.getWest(),b.getNorth()],[b.getWest(),b.getSouth()]];
- const ring=c.map(([lng,lat])=>toRD(lng,lat));
- return {_geo:{intersects:{type:'Polygon',coordinates:[ring]}}};
-}
-const RP_HEADERS={'Content-Type':'application/json','Content-Crs':'epsg:28992','Accept-Crs':'epsg:28992'};
-async function rpZoek(path,withGeom){
- try{
-   const r=await fetch(`/api/rp/${path}/_zoek?pageSize=300${withGeom?'&expand=geometrie':''}`,
-     {method:'POST',headers:RP_HEADERS,body:JSON.stringify(bboxGeo())});
-   if(!r.ok)return null;
-   return await r.json();
- }catch(e){return null;}
+ const a=toRD(b.getWest(),b.getSouth()), c=toRD(b.getEast(),b.getNorth());
+ return rdPolyBody(Math.min(a[0],c[0]),Math.min(a[1],c[1]),Math.max(a[0],c[0]),Math.max(a[1],c[1]));
 }
 
-/* op kaartbeeld-wissel: plannen zoeken en hun geometrie 1x in de cache laden */
+/* kaartbeeld: geldende plannen (nieuwste eerst) + vlakken/aanduidingen parallel laden */
 async function loadVlakken(b,s){
- if(!document.getElementById('t-vlak').checked || !window.RP_ENABLED){
-   [vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});vlakGeo=aandGeo=null;vlakken=[];aanduidingen=[];return;
+ if(!document.getElementById('t-vlak').checked||!window.RP_ENABLED){
+  [vlakGeo,aandGeo].forEach(l=>{if(l)map.removeLayer(l);});vlakGeo=aandGeo=null;vlakken=[];aanduidingen=[];planIds=[];return;
  }
  try{
-  for(const k in geomCache)delete geomCache[k]; // cache geldt per kaartbeeld
-  const pj=await rpZoek('plannen',false);
+  const body=mapBodyRD();
+  const all=await rpZoekAll('plannen',body,false);
   if(s!==undefined&&s!==loadSeq)return;
-  if(!pj){setStatus('Plannen zoeken mislukt');return;}
-  const all=(pj._embedded&&pj._embedded.plannen)||[];
-  let bp=all.filter(p=>/bestemmingsplan|beheersverordening|inpassingsplan/i.test(p.type||''));
-  if(!bp.length)bp=all;
-  const isParaplu=p=>/paraplu|facet|parkeer|archeolog|cultuurhist|geluid|natuurbescherm/i.test((p.naam||'')+' '+(p.type||''));
-  bp.sort((a,b)=>(isParaplu(a)?1:0)-(isParaplu(b)?1:0)); // land-use-plannen eerst, gebiedsdekkende paraplu's achteraan
-  const bpIds=bp.map(p=>p.id||p.identificatie).filter(Boolean);
-  window._vlakTrunc = bpIds.length>15;
-  planIds=bpIds.slice(0,15);
-  const emb=j=>{const e=(j&&j._embedded)||{};return e.bestemmingsvlakken||e.functieaanduidingen||Object.values(e)[0]||[];};
-  for(const id of planIds){
-   const bvj=await rpZoek(`plannen/${encodeURIComponent(id)}/bestemmingsvlakken`,true);
-   if(s!==undefined&&s!==loadSeq)return;
-   const bvArr=emb(bvj);
-   let faArr=[];
-   if(bvArr.length){ const faj=await rpZoek(`plannen/${encodeURIComponent(id)}/functieaanduidingen`,true); if(s!==undefined&&s!==loadSeq)return; faArr=emb(faj); }
-   if(bvArr.length>=300||faArr.length>=300)window._vlakTrunc=true;
-   geomCache[id]={
-     bv:bvArr.map(v=>{const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),gjRaw:v.geometrie,gj:null};}),
-     fa:faArr.map(a=>{const naam=a.naam||a.type||'';return {naam,groep:besGroep(naam),gjRaw:a.geometrie,gj:null};})
-   };
-  }
+  if(!all){setStatus('Plannen zoeken mislukt');return;}
+  const metas=eligiblePlans(all);
+  window._vlakTrunc=metas.length>MAP_PLAN_CAP;
+  const pick=metas.slice(0,MAP_PLAN_CAP);
+  const cache={};
+  await pool(pick,4,async m=>{
+   const id=encodeURIComponent(m.id);
+   const [bv,fa]=await Promise.all([
+    rpZoekAll(`plannen/${id}/bestemmingsvlakken`,body,true),
+    rpZoekAll(`plannen/${id}/functieaanduidingen`,body,true)]);
+   cache[m.id]={meta:m,bv:(bv||[]).map(prepVlak),fa:(fa||[]).map(prepVlak)};
+  });
+  if(s!==undefined&&s!==loadSeq)return;
+  for(const k in geomCache)delete geomCache[k];
+  Object.assign(geomCache,cache);
+  planIds=pick.map(m=>m.id);
   applyKeyword(s);
  }catch(e){setStatus('Bestemmingen laden mislukt: '+e.message);}
 }
 
-/* trefwoord-filter uit de cache (geen nieuwe API-calls) -> tekenen + treffers */
 function applyKeyword(s){
- if(s!==undefined&&s!==loadSeq)return;     // stale ronde
+ if(s!==undefined&&s!==loadSeq)return;
  vlakken=[]; aanduidingen=[];
- if(document.getElementById('t-vlak').checked && window.RP_ENABLED && keywords().length){
+ if(document.getElementById('t-vlak').checked&&window.RP_ENABLED&&keywords().length){
   for(const id of planIds){
    const ch=geomCache[id]; if(!ch)continue;
-   ch.bv.forEach(o=>{ if(naamMatch(o.naam)){ if(!o.gj)o.gj=reproj(o.gjRaw); vlakken.push(o);} });
-   ch.fa.forEach(o=>{ if(naamMatch(o.naam)){ if(!o.gj)o.gj=reproj(o.gjRaw); aanduidingen.push(o);} });
+   ch.bv.forEach(o=>{ if(naamMatch(o.naam)){ if(!o.gj)o.gj=reproj(o.g); vlakken.push(o);} });
+   ch.fa.forEach(o=>{ if(naamMatch(o.naam)){ if(!o.gj)o.gj=reproj(o.g); aanduidingen.push(o);} });
   }
  }
  const kw=keywords().join(', ')||'—';
@@ -401,138 +538,434 @@ function applyKeyword(s){
 }
 
 function drawVlakken(){
- if(vlakGeo)map.removeLayer(vlakGeo);
+ if(vlakGeo){map.removeLayer(vlakGeo);vlakGeo=null;}
  if(!vlakken.length)return;
  const feats={type:'FeatureCollection',features:vlakken.filter(v=>v.gj).map(v=>({type:'Feature',geometry:v.gj,properties:{groep:v.groep}}))};
- vlakGeo=L.geoJSON(feats,{style:f=>{const col=besColor[f.properties.groep]||'#cfc6bb';return {color:'#a9594c',weight:1.5,fillColor:col,fillOpacity:.4};}}).addTo(map);
+ vlakGeo=L.geoJSON(feats,{interactive:false,style:f=>({color:'#a9594c',weight:1.5,fillColor:besColor[f.properties.groep]||'#cfc6bb',fillOpacity:.4})}).addTo(map);
  vlakGeo.bringToBack(); bases[document.getElementById('base').value].bringToBack();
 }
 function drawAanduidingen(){
- if(aandGeo)map.removeLayer(aandGeo);
+ if(aandGeo){map.removeLayer(aandGeo);aandGeo=null;}
  if(!aanduidingen.length)return;
  const feats={type:'FeatureCollection',features:aanduidingen.filter(a=>a.gj).map(a=>({type:'Feature',geometry:a.gj,properties:{}}))};
- aandGeo=L.geoJSON(feats,{style:()=>({color:'#7a2d22',weight:2,dashArray:'4 3',fill:false,opacity:1})}).addTo(map);
+ aandGeo=L.geoJSON(feats,{interactive:false,style:()=>({color:'#7a2d22',weight:2,dashArray:'4 3',fill:false,opacity:1})}).addTo(map);
 }
 
-/* ---------- treffers berekenen (spatial join, lokaal — alleen tegen aangevinkte) ---------- */
+/* ---------- treffers op de kaart: punt-in-vlak van het nieuwste geldende plan ---------- */
 function recompute(){
  const sel=selectedFuncs();
+ const plans=planIds.map(id=>geomCache[id]).filter(Boolean);
+ const kwOn=keywords().length>0;
  let hits=0;
  panden.forEach(r=>{
-   r.hit=false; r.bestemming=null; r.aanduiding=null;
-   const fnMatch=r.gebruik.find(g=>sel.includes(g));
-   if(fnMatch){
-     for(const v of vlakken){ if(!v.gj)continue; let ins=false; try{ins=turf.booleanIntersects(r.poly,v.gj);}catch(e){} if(ins){r.hit=true;r.bestemming=v.naam;break;} }
-     if(!r.hit){ for(const a of aanduidingen){ if(!a.gj)continue; let ins=false; try{ins=turf.booleanIntersects(r.poly,a.gj);}catch(e){} if(ins){r.hit=true;r.aanduiding=a.naam;break;} } }
-     if(r.hit)hits++;
+  r.hit=false; r.bestemming=null; r.aanduiding=null; r.plan=null;
+  const fnMatch=r.gebruik.find(g=>sel.includes(g));
+  if(fnMatch&&plans.length){
+   if(!r.rdPt){ let p=r.center; try{p=turf.pointOnFeature(r.poly).geometry.coordinates;}catch(e){} r.rdPt=toRD(p[0],p[1]); }
+   const d=decide(r.rdPt,plans);
+   if(d){
+    r.bestemming=d.vlak; r.plan=d.plan;
+    if(kwOn){
+     if(naamMatch(d.vlak))r.hit=true;
+     else{ const a=d.aand.find(naamMatch); if(a){r.hit=true;r.aanduiding=a;} }
+    }
    }
-   styleP(r,fnMatch);
+   if(r.hit)hits++;
+  }
+  styleP(r,fnMatch);
  });
- document.getElementById('hitline').textContent = hits? `${hits} treffer(s) in beeld` : '';
+ document.getElementById('hitline').textContent=hits?`${hits} treffer(s) in beeld`:'';
 }
 function styleP(r,fnMatch){
- if(r.hit)      r.layer.setStyle({color:'#7a2d22',weight:3,fillColor:'#C36C5E',fillOpacity:.85,className:'hit'});
+ if(r.hit)       r.layer.setStyle({color:'#7a2d22',weight:3,fillColor:'#C36C5E',fillOpacity:.85,className:'hit'});
  else if(fnMatch)r.layer.setStyle({color:fnColor[fnMatch],weight:1.4,fillColor:fnColor[fnMatch],fillOpacity:.55,className:''});
  else            r.layer.setStyle({color:'#b9ab9b',weight:.4,fillColor:'#b9ab9b',fillOpacity:.06,className:''});
 }
 
-/* ---------- pand-popup ---------- */
 async function openPand(r){
- let adres='—';
- try{const u=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse?lat=${r.center[1]}&lon=${r.center[0]}&rows=1&type=adres&fl=weergavenaam`;
-   const j=await (await fetch(u)).json(); adres=(j.response&&j.response.docs[0]&&j.response.docs[0].weergavenaam)||'—';}catch(e){}
+ const adres=await reverseAdres(r.center[1],r.center[0]);
  const el=document.createElement('div');el.className='pop';
  const besTekst=(r.bestemming||'—')+(r.aanduiding?` · aanduiding: ${r.aanduiding}`:'');
- el.innerHTML=`<h3>${adres}</h3>
-  <div class="row"><span>Gebruik:</span> ${r.gebruik.join(', ')||'onbekend'}</div>
-  <div class="row"><span>Bestemming:</span> ${besTekst}</div>
-  <div class="row"><span>Bouwjaar:</span> ${r.props.bouwjaar||'—'} · ${r.props.oppervlakte_max||r.props.oppervlakte_min||'—'} m²</div>
+ el.innerHTML=`<h3>${esc(adres)}</h3>
+  <div class="row"><span>Gebruik:</span> ${esc(r.gebruik.join(', ')||'onbekend')}</div>
+  <div class="row"><span>Bestemming:</span> ${esc(besTekst)}</div>
+  ${r.plan?`<div class="row"><span>Plan:</span> ${esc(r.plan)}</div>`:''}
+  <div class="row"><span>Bouwjaar:</span> ${esc(r.props.bouwjaar||'—')} · ${esc(r.props.oppervlakte_max||r.props.oppervlakte_min||'—')} m²</div>
   <div class="verdict ${r.hit?'hit-v':'no-v'}">${r.hit?(r.aanduiding?'⌖ Raak — bestemming met afwijkende functieaanduiding':'⌖ Raak — gebruik wijkt af van bestemming'):'Geen treffer met huidige filters'}</div>
   <button>Bewaar als lead</button>`;
  const btn=el.querySelector('button');
  btn.addEventListener('click',async()=>{
-   btn.disabled=true;btn.textContent='Bewaren…';
-   await saveLead({adres,pand_id:String(r.props.identificatie||''),gebruik:r.gebruik.join(', '),
-     bestemming:besTekst,bouwjaar:r.props.bouwjaar||null,lat:r.center[1],lng:r.center[0]});
-   btn.textContent='Bewaard ✓';
+  btn.disabled=true;btn.textContent='Bewaren…';
+  await saveLead({adres,pand_id:String(r.props.identificatie||''),gebruik:r.gebruik.join(', '),
+   bestemming:besTekst,bouwjaar:r.props.bouwjaar||null,lat:r.center[1],lng:r.center[0]});
+  btn.textContent='Bewaard ✓';
  });
  L.popup({maxWidth:280}).setLatLng([r.center[1],r.center[0]]).setContent(el).openOn(map);
 }
 
-/* ---------- Gemeente-scan (server) ---------- */
-let scanJob=null, scanPoll=null;
-const scanStatusEl=()=>document.getElementById('scanStatus');
-function scanStatus(t){scanStatusEl().textContent=t;}
-document.getElementById('scanBtn').addEventListener('click',startGemeenteScan);
-async function startGemeenteScan(){
- const gem=document.getElementById('scanGem').value.trim();
- if(!gem){alert('Vul een gemeente in.');return;}
- if(!keywords().length){alert('Vul minstens één trefwoord in (blok 2).');return;}
- scanStatus('Starten…'); document.getElementById('scanBtn').disabled=true;
- try{
-   const r=await fetch('/api/scan/start',{method:'POST',headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({gemeente:gem,functies:selectedFuncs(),keywords:keywords()})});
-   const j=await r.json();
-   if(!r.ok){scanStatus('Fout: '+(j.error||r.status));document.getElementById('scanBtn').disabled=false;return;}
-   scanJob=j.job_id;
-   clearInterval(scanPoll); scanPoll=setInterval(pollScan,4000); pollScan();
- }catch(e){scanStatus('Fout: '+e.message);document.getElementById('scanBtn').disabled=false;}
+/* =====================================================================
+   LIJST-SCAN — client-side, gebied = woonplaats / gemeente / provincie / kaartbeeld
+   1) BAG verblijfsobjecten per functie (gefilterd op de server van PDOK)
+   2) objecten in cellen van 800 m; per cel geldende plannen, nieuwste eerst
+   3) per object het bestemmingsvlak van het nieuwste plan dat het punt bevat
+   ===================================================================== */
+const gebiedInput=document.getElementById('gebied');
+const gebiedRes=document.getElementById('gebiedres');
+let gebied=null, scanAbort=null, scanning=false;
+let scanObjs=[], scanMeta=null, scanLayer=null;
+
+let gebTimer;
+gebiedInput.addEventListener('input',()=>{gebied=null;setChip();clearTimeout(gebTimer);gebTimer=setTimeout(zoekGebied,300);});
+async function gebiedSuggest(q){
+ const fl='id,type,weergavenaam,woonplaatscode,woonplaatsnaam,gemeentecode,gemeentenaam,provinciecode,provincienaam';
+ const j=await fetchJSON(`${LS}/free?q=${encodeURIComponent(q)}&rows=8&fl=${fl}&fq=type:(woonplaats OR gemeente OR provincie)`,{},2);
+ return (j&&j.response&&j.response.docs)||[];
 }
-async function pollScan(){
- if(!scanJob)return;
- try{
-   const r=await (await fetch(`/api/scan/status?job=${scanJob}`)).json();
-   scanStatus(`${r.status||''} · ${r.done_cells||0}/${r.total_cells||'?'} cellen · ${r.hits||0} treffers`);
-   if(sb){ const {data}=await sb.from('scan_resultaten').select('*').eq('job_id',scanJob).order('id',{ascending:true}); renderScan(data||[]); }
-   if(r.status==='klaar'){clearInterval(scanPoll);document.getElementById('scanBtn').disabled=false;}
- }catch(e){}
-}
-function renderScan(rows){
- window._scan=rows;
- const head=document.getElementById('scanResHead'), box=document.getElementById('scanRes');
- head.style.display=rows.length?'block':'none';
- if(!rows.length){box.innerHTML='';return;}
- box.innerHTML='';
- rows.slice(0,400).forEach(l=>{
-   const el=document.createElement('div');el.className='lead';
-   el.innerHTML=`<div class="adr">${l.gebruik||'—'} → <b>${l.bestemming||'—'}</b></div>
-     <div class="meta">${l.pand_id||''}</div>`;
-   el.querySelector('.adr').style.cursor='pointer';
-   el.querySelector('.adr').addEventListener('click',()=>map.setView([l.lat,l.lng],19));
-   box.appendChild(el);
+const TYPELBL={woonplaats:'plaats',gemeente:'gemeente',provincie:'provincie'};
+async function zoekGebied(){
+ const q=gebiedInput.value.trim();
+ if(q.length<2){gebiedRes.innerHTML='';return;}
+ const docs=await gebiedSuggest(q);
+ gebiedRes.innerHTML='';
+ docs.forEach(d=>{
+  const el=document.createElement('div');el.className='adresitem';
+  el.innerHTML=`<span>${esc(d.weergavenaam)}</span><span class="tag">${TYPELBL[d.type]||d.type}</span>`;
+  el.addEventListener('click',()=>{pickGebied(d);gebiedRes.innerHTML='';});
+  gebiedRes.appendChild(el);
  });
- if(rows.length>400){const m=document.createElement('div');m.className='empty';m.textContent=`… en nog ${rows.length-400} meer (zie CSV).`;box.appendChild(m);}
 }
+function pickGebied(d){
+ gebied={type:d.type,label:d.weergavenaam,woonplaatscode:d.woonplaatscode,gemeentecode:d.gemeentecode,gemeentenaam:d.gemeentenaam,provincienaam:d.provincienaam};
+ gebiedInput.value=d.weergavenaam; setChip();
+}
+function setChip(){
+ const c=document.getElementById('gebiedchip');
+ if(!gebied){c.style.display='none';return;}
+ c.style.display='block'; c.innerHTML=`Gebied: <b>${esc(gebied.label)}</b> (${TYPELBL[gebied.type]||gebied.type})`;
+}
+
+function scanStatus(t){document.getElementById('scanStatus').textContent=t;}
+function progress(f){const p=document.getElementById('prog');p.style.display=f==null?'none':'block';document.getElementById('progbar').style.width=((f||0)*100).toFixed(1)+'%';}
+
+document.getElementById('scanBtn').addEventListener('click',async()=>{
+ if(scanning)return;
+ if(!gebied){
+  const q=gebiedInput.value.trim();
+  if(!q){alert('Vul een plaats, gemeente of provincie in.');return;}
+  const docs=await gebiedSuggest(q);
+  if(!docs.length){alert('Gebied niet gevonden.');return;}
+  pickGebied(docs[0]);
+ }
+ runScan(gebied);
+});
+document.getElementById('scanView').addEventListener('click',()=>{
+ if(scanning)return;
+ if(map.getZoom()<12){alert('Zoom verder in (minimaal stadsniveau) voor een kaartbeeld-scan.');return;}
+ const b=map.getBounds();
+ runScan({type:'bbox',label:'kaartbeeld',bbox:[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()]});
+});
+document.getElementById('scanStop').addEventListener('click',()=>{ if(scanAbort)scanAbort.abort(); });
+
+const pad4=c=>String(c||'').padStart(4,'0');
+async function woonplaatsenVanGemeente(g){
+ const fl='woonplaatscode,woonplaatsnaam';
+ let j=await fetchJSON(`${LS}/free?q=*:*&fq=type:woonplaats&fq=gemeentecode:${g.gemeentecode}&rows=200&fl=${fl}`,{},2);
+ let docs=(j&&j.response&&j.response.docs)||[];
+ if(!docs.length){
+  j=await fetchJSON(`${LS}/free?q=${encodeURIComponent(g.gemeentenaam)}&fq=type:woonplaats&fq=gemeentenaam:"${encodeURIComponent(g.gemeentenaam)}"&rows=200&fl=${fl}`,{},2);
+  docs=(j&&j.response&&j.response.docs)||[];
+ }
+ const seen=new Set();
+ return docs.filter(d=>d.woonplaatscode&&!seen.has(d.woonplaatscode)&&seen.add(d.woonplaatscode)).map(d=>({code:d.woonplaatscode,naam:d.woonplaatsnaam}));
+}
+async function bagAll(qs,signal,onPage,validate){
+ let url=`${BAG_VBO}?f=json&limit=1000&${qs}`;
+ const out=[]; let first=true;
+ while(url){
+  const j=await fetchJSON(url,{signal},first&&validate?2:4);
+  if(!j)throw new Error('BAG-verzoek mislukt');
+  const fs=j.features||[];
+  if(first&&validate&&!validate(fs))throw new Error('filter-genegeerd');
+  first=false;
+  out.push(...fs); onPage&&onPage(fs.length);
+  const nx=(j.links||[]).find(l=>l.rel==='next');
+  url=(nx&&fs.length)?nx.href:null;
+ }
+ return out;
+}
+const STATUS_OK=s=>/in gebruik|verbouwing|buiten gebruik/i.test(s||'')&&!/ingetrokken|onrechte|niet gerealiseerd/i.test(s||'');
+function vboObj(f){
+ const p=f.properties||{}, c=f.geometry&&f.geometry.coordinates;
+ if(!c||!STATUS_OK(p.status))return null;
+ const nr=`${p.huisnummer??''}${p.huisletter||''}${p.toevoeging?'-'+p.toevoeging:''}`;
+ return {id:p.identificatie,adres:`${p.openbare_ruimte_naam||''} ${nr}`.trim(),postcode:p.postcode||'',plaats:p.woonplaats_naam||'',
+  gemeente:p.bronhouder_naam||'',gebruik:String(p.gebruiksdoel||'').split(/[;,]/).map(s=>s.trim().toLowerCase()).filter(Boolean),
+  opp:p.oppervlakte??null,status:p.status||'',pand:((p['pand.href']||[])[0]||'').split('/').pop(),lng:c[0],lat:c[1],d:null};
+}
+
+async function runScan(area){
+ const funcs=selectedFuncs().filter(f=>f!=='geen functie');
+ if(!funcs.length){alert('Vink minstens één functie aan (blok 1).');return;}
+ if(!window.RP_ENABLED){alert('Ruimtelijke Plannen-key ontbreekt op de server — scan kan geen bestemmingen ophalen.');return;}
+ scanning=true; scanAbort=new AbortController(); const signal=scanAbort.signal;
+ const btn=document.getElementById('scanBtn'); btn.disabled=true; btn.textContent='Bezig…';
+ document.getElementById('scanStop').style.display='inline';
+ progress(0);
+ const t0=Date.now();
+ try{
+  /* 1 · gebied -> BAG-filters */
+  const q=s=>String(s).replace(/'/g,"''");
+  const wpFilter=code=>({qs:`woonplaats_identificatie=${code}`,cql:`woonplaats_identificatie='${q(code)}'`,check:p=>String(p.woonplaats_identificatie)===code});
+  let filters=[];
+  if(area.type==='provincie'){const pn=area.provincienaam||area.label;
+   filters=[{qs:`provincie_naam=${encodeURIComponent(pn)}`,cql:`provincie_naam='${q(pn)}'`,check:p=>p.provincie_naam===pn}];}
+  else if(area.type==='woonplaats')filters=[wpFilter(pad4(area.woonplaatscode))];
+  else if(area.type==='gemeente'){
+   scanStatus('Woonplaatsen in gemeente ophalen…');
+   const wps=await woonplaatsenVanGemeente(area);
+   if(!wps.length)throw new Error('Geen woonplaatsen gevonden voor deze gemeente');
+   filters=wps.map(w=>wpFilter(pad4(w.code)));
+  }else if(area.type==='bbox')filters=[{qs:`bbox=${area.bbox.join(',')}`,cql:null,check:null}];
+
+  /* 2 · BAG verblijfsobjecten: CQL2 LIKE vangt ook gecombineerde gebruiksdoelen
+        ("kantoorfunctie,winkelfunctie"); valt terug op exacte filter per functie */
+  const byId=new Map(); let fetched=0, fallback=0;
+  const onPage=n=>{fetched+=n;scanStatus(`BAG: ${fetched.toLocaleString('nl')} objecten opgehaald…`);};
+  const add=fs=>fs.forEach(f=>{const o=vboObj(f); if(o&&o.id&&!byId.has(o.id))byId.set(o.id,o);});
+  const fnCql=funcs.map(fn=>`gebruiksdoel LIKE '%${q(fn)}%'`).join(' OR ');
+  const fnOk=p=>{const g=String(p.gebruiksdoel||'').toLowerCase();return funcs.some(fn=>g.includes(fn));};
+  let jd=0;
+  await pool(filters,4,async f=>{
+   const cql=f.cql?`${f.cql} AND (${fnCql})`:`(${fnCql})`;
+   const qs=(f.cql?'':f.qs+'&')+`filter=${encodeURIComponent(cql)}&filter-lang=cql2-text`;
+   const validate=fs=>fs.every(x=>{const p=x.properties||{};return fnOk(p)&&(!f.check||f.check(p));});
+   try{
+    add(await bagAll(qs,signal,onPage,validate));
+   }catch(e){
+    if(e.name==='AbortError')throw e;
+    fallback++;
+    for(const fn of funcs)add(await bagAll(`${f.qs}&gebruiksdoel=${encodeURIComponent(fn)}`,signal,onPage));
+   }
+   jd++; progress(.15*jd/filters.length);
+  });
+  if(fallback)console.warn(`Bestemmingsradar: CQL-filter niet geaccepteerd voor ${fallback} gebied(en) — exacte filter gebruikt, gecombineerde gebruiksdoelen ontbreken daar.`);
+  const objs=[...byId.values()];
+  if(!objs.length)throw new Error('Geen objecten gevonden met deze functies in dit gebied');
+  if(objs.length>40000&&!confirm(`${objs.length.toLocaleString('nl')} objecten gevonden — dit kan lang duren. Doorgaan?`))throw new DOMException('stop','AbortError');
+
+  /* 3 · cellen */
+  const CELL=800, cells=new Map();
+  objs.forEach(o=>{
+   o.rd=toRD(o.lng,o.lat);
+   const k=Math.floor(o.rd[0]/CELL)+'_'+Math.floor(o.rd[1]/CELL);
+   if(!cells.has(k))cells.set(k,[]); cells.get(k).push(o);
+  });
+  const cellArr=[...cells.values()];
+  let done=0, rpFail=0;
+  scanStatus(`${objs.length.toLocaleString('nl')} objecten · bestemmingen ophalen (0/${cellArr.length} cellen)…`);
+
+  /* 4 · per cel: geldende plannen nieuwste-eerst, stoppen zodra elk punt een vlak heeft */
+  await pool(cellArr,4,async co=>{
+   let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+   co.forEach(o=>{x0=Math.min(x0,o.rd[0]);y0=Math.min(y0,o.rd[1]);x1=Math.max(x1,o.rd[0]);y1=Math.max(y1,o.rd[1]);});
+   const body=rdPolyBody(x0-3,y0-3,x1+3,y1+3);
+   const all=await rpZoekAll('plannen',body,false,signal);
+   if(!all)rpFail++;
+   const metas=eligiblePlans(all||[]);
+   let open=co.slice(); const decisive=new Map(); const hitPl=new Map();
+   for(const m of metas){
+    if(!open.length)break;
+    const bv=await rpZoekAll(`plannen/${encodeURIComponent(m.id)}/bestemmingsvlakken`,body,true,signal);
+    const pl={meta:m,bv:(bv||[]).map(prepVlak),fa:null};
+    open=open.filter(o=>{const v=findVlak(pl.bv,o.rd); if(v){hitPl.set(o,{v,pl});decisive.set(m.id,pl);return false;} return true;});
+   }
+   for(const pl of decisive.values()){
+    const fa=await rpZoekAll(`plannen/${encodeURIComponent(pl.meta.id)}/functieaanduidingen`,body,true,signal);
+    pl.fa=(fa||[]).map(prepVlak);
+   }
+   co.forEach(o=>{const h=hitPl.get(o); o.d=h?{vlak:h.v.naam,aand:aandOp(h.pl,o.rd),plan:h.pl.meta.naam,datum:h.pl.meta.datum}:null;});
+   done++;
+   progress(.15+.85*done/cellArr.length);
+   const el=(Date.now()-t0)/1000, eta=done>3?Math.round(el/done*(cellArr.length-done)):null;
+   scanStatus(`${objs.length.toLocaleString('nl')} objecten · bestemmingen ${done}/${cellArr.length} cellen${eta!=null?` · nog ~${eta>90?Math.round(eta/60)+' min':eta+' s'}`:''}`);
+  });
+
+  objs.forEach(o=>delete o.rd);
+  scanObjs=objs;
+  scanMeta={label:area.label,type:area.type,funcs,datum:new Date().toISOString(),rpFail};
+  saveScanLocal();
+  const sec=Math.round((Date.now()-t0)/1000);
+  scanStatus(`Klaar in ${sec>90?Math.round(sec/60)+' min':sec+' s'} — ${objs.length.toLocaleString('nl')} objecten.${rpFail?` ⚠ ${rpFail} cel(len) zonder plan-antwoord.`:''}${fallback?' ⚠ PDOK accepteerde het combi-filter niet — objecten met meerdere gebruiksdoelen kunnen ontbreken.':''}`);
+  renderLijst(); showView('lijst');
+ }catch(e){
+  if(e.name==='AbortError')scanStatus('Scan gestopt.');
+  else scanStatus('Fout: '+e.message);
+ }finally{
+  scanning=false; btn.disabled=false; btn.textContent='Scan gebied';
+  document.getElementById('scanStop').style.display='none'; progress(null);
+ }
+}
+
+/* lokaal bewaren zodat de laatste scan na herladen terug is */
+function saveScanLocal(){ try{localStorage.setItem('br_scan',JSON.stringify({meta:scanMeta,objs:scanObjs}));}catch(e){} }
+function loadScanLocal(){ try{const j=JSON.parse(localStorage.getItem('br_scan')||'null'); if(j&&j.objs){scanObjs=j.objs;scanMeta=j.meta;}}catch(e){} }
+
+/* ---------- lijst-weergave ---------- */
+let lSort={k:'adres',dir:1}, lShown=500, lRows=[], lSel=new Set();
+const isHit=(o,selSet)=>o.gebruik.some(g=>selSet.has(g))&&o.d&&(naamMatch(o.d.vlak)||o.d.aand.some(naamMatch));
+function buildRows(){
+ const selSet=new Set(selectedFuncs()), kwOn=keywords().length>0;
+ const perPand=document.getElementById('lpand').checked;
+ const mk=(o,hit)=>({key:o.id,ids:[o.id],adres:o.adres,postcode:o.postcode,plaats:o.plaats,gemeente:o.gemeente,
+  gebruik:o.gebruik.join(', '),opp:o.opp,bestemming:o.d?o.d.vlak:'',aand:o.d?(o.d.aand.find(naamMatch)||o.d.aand.join(', ')):'',
+  plan:o.d?o.d.plan:'',datum:o.d?o.d.datum:'',lng:o.lng,lat:o.lat,hit,n:1,status:o.status,heeftPlan:!!o.d,pandKey:o.pand,
+  relevant:o.gebruik.some(g=>selSet.has(g))});
+ const base=scanObjs.map(o=>mk(o,kwOn&&isHit(o,selSet))).filter(r=>r.relevant);
+ if(!perPand)return base;
+ const groups=new Map();
+ base.forEach(r=>{
+  const k=r.pandKey||r.key;
+  if(!groups.has(k))groups.set(k,[]);
+  groups.get(k).push(r);
+ });
+ return [...groups.entries()].map(([k,rs])=>{
+  rs.sort((a,b)=>(b.hit-a.hit)||a.adres.localeCompare(b.adres,'nl',{numeric:true}));
+  const f=rs[0];
+  return {...f,key:k,ids:rs.map(r=>r.key),n:rs.length,hit:rs.some(r=>r.hit),
+   gebruik:[...new Set(rs.flatMap(r=>r.gebruik.split(', ')))].join(', '),
+   opp:rs.reduce((s,r)=>s+(r.opp||0),0)||null,heeftPlan:rs.some(r=>r.heeftPlan)};
+ });
+}
+function renderLijst(){
+ document.getElementById('tabcnt').textContent=scanObjs.length?`(${scanObjs.length.toLocaleString('nl')})`:'';
+ if(!scanObjs.length||!scanMeta)return;
+ const all=buildRows();
+ const onlyHits=document.getElementById('lhits').checked;
+ const q=document.getElementById('lzoek').value.trim().toLowerCase();
+ let rows=all.filter(r=>(!onlyHits||r.hit)&&(!q||`${r.adres} ${r.postcode} ${r.plaats} ${r.bestemming} ${r.aand} ${r.plan}`.toLowerCase().includes(q)));
+ const {k,dir}=lSort;
+ rows.sort((a,b)=>{const x=a[k],y=b[k];
+  if(typeof x==='number'||typeof y==='number')return dir*((x??-1)-(y??-1));
+  return dir*String(x||'').localeCompare(String(y||''),'nl',{numeric:true});});
+ lRows=rows;
+ const hits=all.filter(r=>r.hit).length, noPlan=all.filter(r=>!r.heeftPlan).length;
+ const unit=document.getElementById('lpand').checked?'panden':'objecten';
+ document.getElementById('lmeta').textContent=`${scanMeta.label} · ${scanMeta.funcs.map(f=>fnLabel[f]||f).join(', ')} · gescand ${new Date(scanMeta.datum).toLocaleString('nl',{dateStyle:'short',timeStyle:'short'})}`;
+ const extra=selectedFuncs().some(f=>f!=='geen functie'&&!scanMeta.funcs.includes(f))?' · ⚠ nieuw aangevinkte functies zitten niet in deze scan — scan opnieuw':'';
+ document.getElementById('lstats').innerHTML=`<b>${all.length.toLocaleString('nl')}</b> ${unit} · <b>${hits.toLocaleString('nl')}</b> treffers op "${esc(keywords().join(', ')||'—')}" · ${noPlan.toLocaleString('nl')} zonder bestemmingsplan · ${rows.length.toLocaleString('nl')} getoond${extra}`;
+ document.querySelectorAll('#ltab th[data-k]').forEach(th=>{
+  const base=th.textContent.replace(/[ ▲▼]+$/,'');
+  th.innerHTML=esc(base)+(th.dataset.k===k?` <span class="arr">${dir>0?'▲':'▼'}</span>`:'');
+ });
+ const tb=document.querySelector('#ltab tbody');
+ tb.innerHTML=rows.slice(0,lShown).map((r,i)=>`<tr class="${r.hit?'h':''}" data-i="${i}">
+  <td><input type="checkbox" class="rsel" ${lSel.has(r.key)?'checked':''}></td>
+  <td class="adr">${esc(r.adres||'—')}${r.n>1?` <span class="n">+${r.n-1}</span>`:''}${r.hit?'<span class="badge">treffer</span>':''}</td>
+  <td class="sm">${esc(r.postcode)}</td>
+  <td>${esc(r.plaats)}</td>
+  <td class="sm">${esc(r.gebruik)}</td>
+  <td class="num">${r.opp!=null?r.opp.toLocaleString('nl'):'—'}</td>
+  <td>${esc(r.bestemming||'—')}</td>
+  <td class="sm">${esc(r.aand||'')}</td>
+  <td class="sm" title="${esc(r.plan)}">${esc((r.plan||'').slice(0,40))}${r.datum?` · ${esc(r.datum.slice(0,4))}`:''}</td></tr>`).join('');
+ document.getElementById('lmore').innerHTML=rows.length>lShown?`<button class="btn-sec" id="lmoreBtn">Toon meer (${(rows.length-lShown).toLocaleString('nl')} resterend)</button>`:'';
+ const mb=document.getElementById('lmoreBtn'); if(mb)mb.onclick=()=>{lShown+=1000;renderLijst();};
+ document.getElementById('lpijp').textContent=lSel.size?`Selectie (${lSel.size}) → pijplijn`:'Alles → pijplijn';
+ if(scanLayer)drawScanLayer();
+}
+document.querySelector('#ltab thead').addEventListener('click',e=>{
+ const th=e.target.closest('th[data-k]'); if(!th)return;
+ lSort=lSort.k===th.dataset.k?{k:lSort.k,dir:-lSort.dir}:{k:th.dataset.k,dir:1};
+ renderLijst();
+});
+document.querySelector('#ltab tbody').addEventListener('click',e=>{
+ const tr=e.target.closest('tr'); if(!tr)return;
+ const r=lRows[+tr.dataset.i]; if(!r)return;
+ if(e.target.classList.contains('rsel')){ e.target.checked?lSel.add(r.key):lSel.delete(r.key); document.getElementById('lpijp').textContent=lSel.size?`Selectie (${lSel.size}) → pijplijn`:'Alles → pijplijn'; return; }
+ if(e.target.closest('td.adr'))openLijstRij(r);
+});
+document.getElementById('lall').addEventListener('change',e=>{
+ lRows.forEach(r=>e.target.checked?lSel.add(r.key):lSel.delete(r.key)); renderLijst();
+});
+['lhits','lpand'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{lShown=500;lSel.clear();document.getElementById('lall').checked=false;renderLijst();}));
+let lzTimer; document.getElementById('lzoek').addEventListener('input',()=>{clearTimeout(lzTimer);lzTimer=setTimeout(()=>{lShown=500;renderLijst();},200);});
+
+const rowBestemming=r=>(r.bestemming||'—')+(r.aand&&r.hit&&!naamMatch(r.bestemming)?` · aanduiding: ${r.aand}`:'');
+const rowLead=r=>({adres:`${r.adres}${r.n>1?` (+${r.n-1})`:''}, ${r.postcode} ${r.plaats}`.trim(),pand_id:r.key,gebruik:r.gebruik,
+ bestemming:rowBestemming(r),bouwjaar:null,lat:r.lat,lng:r.lng,status:'te benaderen'});
+function openLijstRij(r){
+ showView('kaart'); map.setView([r.lat,r.lng],19);
+ const el=document.createElement('div');el.className='pop';
+ el.innerHTML=`<h3>${esc(r.adres)}${r.n>1?` <span class="n">+${r.n-1}</span>`:''}</h3>
+  <div class="row"><span>Gebruik:</span> ${esc(r.gebruik)}</div>
+  <div class="row"><span>Bestemming:</span> ${esc(rowBestemming(r))}</div>
+  <div class="row"><span>Plan:</span> ${esc(r.plan||'—')}${r.datum?' ('+esc(r.datum.slice(0,10))+')':''}</div>
+  <div class="row"><span>Opp.:</span> ${r.opp!=null?r.opp+' m²':'—'}</div>
+  <div class="verdict ${r.hit?'hit-v':'no-v'}">${r.hit?'⌖ Raak — gebruik wijkt af van bestemming':'Geen treffer met huidige filters'}</div>
+  <button>Bewaar als lead</button>`;
+ const b=el.querySelector('button');
+ b.addEventListener('click',async()=>{b.disabled=true;b.textContent='Bewaren…';await saveLead(rowLead(r));b.textContent='Bewaard ✓';});
+ setTimeout(()=>L.popup({maxWidth:290}).setLatLng([r.lat,r.lng]).setContent(el).openOn(map),350);
+}
+document.getElementById('lpijp').addEventListener('click',async()=>{
+ if(!sb){alert('Supabase niet geconfigureerd op de server.');return;}
+ const pick=lSel.size?lRows.filter(r=>lSel.has(r.key)):lRows;
+ const have=new Set((window._leads||[]).map(l=>String(l.pand_id)));
+ const nieuw=pick.filter(r=>!have.has(String(r.key)));
+ if(!nieuw.length){alert('Alles staat al in de pijplijn.');return;}
+ if(!confirm(`${nieuw.length} lead(s) naar de pijplijn${pick.length-nieuw.length?` (${pick.length-nieuw.length} al aanwezig, overgeslagen)`:''}?`))return;
+ for(let i=0;i<nieuw.length;i+=500){
+  const {error}=await sb.from('leads').insert(nieuw.slice(i,i+500).map(rowLead));
+  if(error){alert('Mislukt: '+error.message);break;}
+ }
+ lSel.clear(); await loadLeads(); renderLijst();
+});
+document.getElementById('lcsv').addEventListener('click',()=>{
+ const rows=[['adres','objecten','postcode','plaats','gemeente','gebruik','m2','bestemming','aanduiding','plan','plandatum','treffer','lat','lng'],
+  ...lRows.map(r=>[r.adres,r.n,r.postcode,r.plaats,r.gemeente,r.gebruik,r.opp,r.bestemming,r.aand,r.plan,(r.datum||'').slice(0,10),r.hit?'ja':'nee',r.lat,r.lng])];
+ downloadCSV(`bestemmingsradar_${(scanMeta&&scanMeta.label||'lijst').replace(/[^\w-]+/g,'_')}.csv`,rows);
+});
+const canvasR=L.canvas({padding:.3});
+function drawScanLayer(){
+ if(scanLayer)map.removeLayer(scanLayer);
+ scanLayer=L.layerGroup(lRows.slice(0,8000).map(r=>L.circleMarker([r.lat,r.lng],{renderer:canvasR,radius:5,weight:1.5,
+  color:r.hit?'#7a2d22':'#5f7167',fillColor:r.hit?'#C36C5E':'#8BA49F',fillOpacity:.85}).on('click',()=>openLijstRij(r)))).addTo(map);
+ document.getElementById('lmap').textContent='Verberg op kaart';
+}
+document.getElementById('lmap').addEventListener('click',()=>{
+ if(scanLayer){map.removeLayer(scanLayer);scanLayer=null;document.getElementById('lmap').textContent='Toon op kaart';return;}
+ if(!lRows.length)return;
+ drawScanLayer(); showView('kaart');
+ const b=L.latLngBounds(lRows.slice(0,8000).map(r=>[r.lat,r.lng])); if(b.isValid())map.fitBounds(b,{padding:[30,30],maxZoom:17});
+});
+
+/* ---------- weergave kaart/lijst ---------- */
+function showView(v){
+ document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+ document.getElementById('lijst').hidden=v!=='lijst';
+ if(v==='kaart')setTimeout(()=>map.invalidateSize(),50);
+ else renderLijst();
+}
+document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.v)));
+
 function downloadCSV(filename,rows){
  const body=rows.map(r=>r.map(c=>`"${(c??'').toString().replace(/"/g,'""')}"`).join(';')).join('\r\n');
- const csv='\uFEFF'+'sep=;\r\n'+body; // UTF-8 BOM + Excel-scheidingsteken-hint -> nette kolommen
+ const csv='\uFEFF'+'sep=;\r\n'+body;
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=filename;a.click();
 }
-document.getElementById('scanCsv').addEventListener('click',()=>{
- const rows=[['pand_id','gebruik','bestemming','lat','lng'],...(window._scan||[]).map(l=>[l.pand_id,l.gebruik,l.bestemming,l.lat,l.lng])];
- downloadCSV('gemeente_scan.csv',rows);
-});
-document.getElementById('scanToPijp').addEventListener('click',async()=>{
- if(!sb||!(window._scan||[]).length)return;
- if(!confirm(`${window._scan.length} resultaten naar de pijplijn kopiëren?`))return;
- const rows=window._scan.map(l=>({adres:'(scan) '+l.pand_id,pand_id:l.pand_id,gebruik:l.gebruik,bestemming:l.bestemming,lat:l.lat,lng:l.lng,status:'te benaderen'}));
- const {error}=await sb.from('leads').insert(rows);
- if(error){alert('Mislukt: '+error.message);return;}
- await loadLeads();
-});
 
 /* ---------- Supabase leadpijplijn ---------- */
 let sb=null;
 const STATUSES=['te benaderen','benaderd','in gesprek','afgewezen','gewonnen'];
 async function initSupabase(){
  try{
-   const cfg=await (await fetch('/api/config')).json();
-   window.RP_ENABLED=cfg.rpEnabled;
-   if(!cfg.rpEnabled)document.getElementById('rpwarn').style.display='block';
-   if(cfg.supabaseUrl&&cfg.supabaseAnonKey){
-     sb=supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
-     await loadLeads();
-   }else{setStatus('Supabase niet geconfigureerd — leads worden niet bewaard.');}
+  const cfg=await (await fetch('/api/config')).json();
+  window.RP_ENABLED=cfg.rpEnabled;
+  if(!cfg.rpEnabled)document.getElementById('rpwarn').style.display='block';
+  if(cfg.supabaseUrl&&cfg.supabaseAnonKey){
+   sb=supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+   await loadLeads();
+  }else setStatus('Supabase niet geconfigureerd — leads worden niet bewaard.');
  }catch(e){setStatus('Config laden mislukt: '+e.message);}
 }
 async function saveLead(l){
@@ -555,16 +988,16 @@ function renderLeads(rows){
  if(!rows.length){list.innerHTML='<div class="empty">Nog geen leads bewaard.</div>';return;}
  list.innerHTML='';
  rows.forEach(l=>{
-   const el=document.createElement('div');el.className='lead';
-   el.innerHTML=`<div class="adr">${l.adres||'—'}</div>
-     <div class="meta">Gebruik: <b>${l.gebruik||'—'}</b></div>
-     <div class="meta">Bestemming: <b>${l.bestemming||'—'}</b>${l.bouwjaar?` · ${l.bouwjaar}`:''}</div>
-     <div class="ctl"><select>${STATUSES.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>
-       <button class="del" title="Verwijder">×</button></div>`;
-   el.querySelector('.adr').addEventListener('click',()=>map.setView([l.lat,l.lng],19));
-   el.querySelector('select').addEventListener('change',async e=>{await sb.from('leads').update({status:e.target.value}).eq('id',l.id);});
-   el.querySelector('.del').addEventListener('click',async()=>{if(confirm('Lead verwijderen?')){await sb.from('leads').delete().eq('id',l.id);loadLeads();}});
-   list.appendChild(el);
+  const el=document.createElement('div');el.className='lead';
+  el.innerHTML=`<div class="adr">${esc(l.adres||'—')}</div>
+   <div class="meta">Gebruik: <b>${esc(l.gebruik||'—')}</b></div>
+   <div class="meta">Bestemming: <b>${esc(l.bestemming||'—')}</b>${l.bouwjaar?` · ${esc(l.bouwjaar)}`:''}</div>
+   <div class="ctl"><select>${STATUSES.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>
+    <button class="del" title="Verwijder">×</button></div>`;
+  el.querySelector('.adr').addEventListener('click',()=>{showView('kaart');map.setView([l.lat,l.lng],19);});
+  el.querySelector('select').addEventListener('change',async e=>{await sb.from('leads').update({status:e.target.value}).eq('id',l.id);});
+  el.querySelector('.del').addEventListener('click',async()=>{if(confirm('Lead verwijderen?')){await sb.from('leads').delete().eq('id',l.id);loadLeads();}});
+  list.appendChild(el);
  });
 }
 document.getElementById('export').addEventListener('click',()=>{
@@ -580,12 +1013,12 @@ document.getElementById('t-kad').addEventListener('change',e=>e.target.checked?k
 document.getElementById('t-perc').addEventListener('change',async()=>{await fetchPercelen(map.getBounds());computePercelen();});
 document.getElementById('base').addEventListener('change',e=>{Object.values(bases).forEach(b=>map.removeLayer(b));bases[e.target.value].addTo(map);bases[e.target.value].bringToBack();});
 
-/* ---------- helpers ---------- */
 function hint(s){document.getElementById('hint').style.display=s?'block':'none';}
 function setStatus(t){document.getElementById('status').textContent=t;}
 let t;map.on('moveend',()=>{clearTimeout(t);t=setTimeout(loadAll,400);});
 
-initSupabase().then(loadAll);
+loadScanLocal();
+initSupabase().then(()=>{renderLijst();loadAll();});
 </script>
 </body>
 </html>
