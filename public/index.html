@@ -326,11 +326,12 @@ function eligiblePlans(all){
 function prepVlak(v){
  const naam=v.naam||v.bestemmingshoofdgroep||v.type||'';
  const g=v.geometrie||null; let bb=null; try{if(g)bb=turf.bbox(g);}catch(e){}
- return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),g,bb,gj:null};
+ return {naam,groep:besGroep(v.bestemmingshoofdgroep||naam),g,bb,gj:null,dubbel:/dubbel/i.test(v.type||'')};
 }
 const inBB=(p,b)=>b&&p[0]>=b[0]&&p[0]<=b[2]&&p[1]>=b[1]&&p[1]<=b[3];
 function pip(p,g){try{return turf.booleanPointInPolygon(p,g);}catch(e){return false;}}
-const findVlak=(arr,p)=>arr.find(v=>v.g&&inBB(p,v.bb)&&pip(p,v.g));
+/* alleen enkelbestemmingen tellen: dubbelbestemmingen (Waarde - Archeologie, Leiding, Waterstaat…) liggen eroverheen */
+const findVlak=(arr,p)=>arr.find(v=>v.g&&!v.dubbel&&inBB(p,v.bb)&&pip(p,v.g));
 const aandOp=(pl,p)=>(pl.fa||[]).filter(a=>a.g&&inBB(p,a.bb)&&pip(p,a.g)).map(a=>a.naam);
 /* beslissend = bestemmingsvlak van het nieuwste geldende plan op dat punt (RD) */
 function decide(p,plans){
@@ -527,7 +528,7 @@ function applyKeyword(s){
  if(document.getElementById('t-vlak').checked&&window.RP_ENABLED&&keywords().length){
   for(const id of planIds){
    const ch=geomCache[id]; if(!ch)continue;
-   ch.bv.forEach(o=>{ if(naamMatch(o.naam)){ if(!o.gj)o.gj=reproj(o.g); vlakken.push(o);} });
+   ch.bv.forEach(o=>{ if(!o.dubbel&&naamMatch(o.naam)){ if(!o.gj)o.gj=reproj(o.g); vlakken.push(o);} });
    ch.fa.forEach(o=>{ if(naamMatch(o.naam)){ if(!o.gj)o.gj=reproj(o.g); aanduidingen.push(o);} });
   }
  }
@@ -669,10 +670,10 @@ document.getElementById('scanStop').addEventListener('click',()=>{ if(scanAbort)
 const pad4=c=>String(c||'').padStart(4,'0');
 async function woonplaatsenVanGemeente(g){
  const fl='woonplaatscode,woonplaatsnaam';
- let j=await fetchJSON(`${LS}/free?q=*:*&fq=type:woonplaats&fq=gemeentecode:${g.gemeentecode}&rows=200&fl=${fl}`,{},2);
+ let j=await fetchJSON(`${LS}/free?q=*:*&fq=type:woonplaats&fq=gemeentecode:${g.gemeentecode}&rows=100&fl=${fl}`,{},2);
  let docs=(j&&j.response&&j.response.docs)||[];
  if(!docs.length){
-  j=await fetchJSON(`${LS}/free?q=${encodeURIComponent(g.gemeentenaam)}&fq=type:woonplaats&fq=gemeentenaam:"${encodeURIComponent(g.gemeentenaam)}"&rows=200&fl=${fl}`,{},2);
+  j=await fetchJSON(`${LS}/free?q=${encodeURIComponent(g.gemeentenaam)}&fq=type:woonplaats&fq=gemeentenaam:"${encodeURIComponent(g.gemeentenaam)}"&rows=100&fl=${fl}`,{},2);
   docs=(j&&j.response&&j.response.docs)||[];
  }
  const seen=new Set();
@@ -852,7 +853,7 @@ function renderLijst(){
  const unit=document.getElementById('lpand').checked?'panden':'objecten';
  document.getElementById('lmeta').textContent=`${scanMeta.label} · ${scanMeta.funcs.map(f=>fnLabel[f]||f).join(', ')} · gescand ${new Date(scanMeta.datum).toLocaleString('nl',{dateStyle:'short',timeStyle:'short'})}`;
  const extra=selectedFuncs().some(f=>f!=='geen functie'&&!scanMeta.funcs.includes(f))?' · ⚠ nieuw aangevinkte functies zitten niet in deze scan — scan opnieuw':'';
- document.getElementById('lstats').innerHTML=`<b>${all.length.toLocaleString('nl')}</b> ${unit} · <b>${hits.toLocaleString('nl')}</b> treffers op "${esc(keywords().join(', ')||'—')}" · ${noPlan.toLocaleString('nl')} zonder bestemmingsplan · ${rows.length.toLocaleString('nl')} getoond${extra}`;
+ document.getElementById('lstats').innerHTML=`<b>${all.length.toLocaleString('nl')}</b> ${unit} · <b>${hits.toLocaleString('nl')}</b> treffers op "${esc(keywords().join(', ')||'—')}" · ${noPlan.toLocaleString('nl')} zonder digitale bestemming (oud plan, alleen PDF) · ${rows.length.toLocaleString('nl')} getoond${extra}`;
  document.querySelectorAll('#ltab th[data-k]').forEach(th=>{
   const base=th.textContent.replace(/[ ▲▼]+$/,'');
   th.innerHTML=esc(base)+(th.dataset.k===k?` <span class="arr">${dir>0?'▲':'▼'}</span>`:'');
