@@ -89,6 +89,21 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
 /* lijst */
 #lijst{position:absolute;inset:0;z-index:800;background:var(--cream);display:flex;flex-direction:column}
 #lijst[hidden]{display:none}
+#pijp{position:absolute;inset:0;z-index:800;background:var(--cream);display:flex}
+#pijp[hidden]{display:none}
+.pmaps{width:230px;flex:none;border-right:1px solid var(--line);overflow:auto;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.pmaps .ph{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;margin:0 6px 8px}
+.pmapitem{display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;line-height:1.3}
+.pmapitem:hover{background:var(--sand)}
+.pmapitem.on{background:var(--ink);color:#fff}
+.pmapitem .c{opacity:.7;font-size:12px;white-space:nowrap}
+.pmapitem.sub{color:var(--muted)}.pmapitem.sub.on{color:#fff}
+.pmain{flex:1;min-width:0;display:flex;flex-direction:column}
+#ptab select{padding:4px 6px;font-size:12px;width:auto;max-width:150px}
+#ptab td.del{color:var(--muted);cursor:pointer;text-align:center}
+#ptab td.del:hover{color:var(--terra)}
+#pbulk{background:var(--sand)}
+#pbulk select{width:auto;padding:5px 8px;font-size:12.5px}
 .lbar{padding:16px 20px 10px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--line);padding-right:190px}
 .ltitle{font-family:'Instrument Serif',serif;font-size:28px;line-height:1}
 .lmeta{font-size:12.5px;color:var(--muted);margin-top:4px}
@@ -113,7 +128,7 @@ td a{color:var(--terra)}
 .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:#fbe9e5;color:#a9594c;margin-left:6px;vertical-align:1px}
 .n{font-weight:400;color:var(--muted);font-size:12px}
 #lmore{padding:12px 0;text-align:center}
-@media(max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr}#side{max-height:46vh}.lbar{padding-right:20px;padding-top:56px}.lctl input[type=text]{width:100%}}
+@media(max-width:760px){#pijp{flex-direction:column}.pmaps{width:auto;max-height:28vh;border-right:none;border-bottom:1px solid var(--line)}#app{grid-template-columns:1fr;grid-template-rows:auto 1fr}#side{max-height:46vh}.lbar{padding-right:20px;padding-top:56px}.lctl input[type=text]{width:100%}}
 </style>
 </head>
 <body>
@@ -189,9 +204,60 @@ td a{color:var(--terra)}
     <div id="tabs">
       <button data-v="kaart" class="on">Kaart</button>
       <button data-v="lijst">Lijst <span id="tabcnt" class="cnt"></span></button>
+      <button data-v="pijp">Pijplijn <span id="pijpcnt" class="cnt"></span></button>
     </div>
     <div id="hint">Zoom verder in om data te laden</div>
     <div id="map"></div>
+
+    <div id="pijp" hidden>
+      <aside class="pmaps">
+        <div class="ph">Mappen</div>
+        <div id="pmaplist"></div>
+        <button id="pnewmap" class="btn-sec" style="margin-top:10px">＋ Nieuwe map</button>
+      </aside>
+      <section class="pmain">
+        <div class="lbar">
+          <div>
+            <div class="ltitle" id="ptitle">Pijplijn</div>
+            <div id="pmeta" class="lmeta"></div>
+          </div>
+        </div>
+        <div class="lctl">
+          <div id="ptabs2" class="ptabs" style="margin:0"></div>
+          <input type="text" id="pzoek" placeholder="Zoek op adres, gebruik, bestemming…">
+          <select id="pstatus" style="width:auto;padding:6px 9px;font-size:13px"></select>
+          <span style="flex:1"></span>
+          <button id="pkaart" class="btn-sec">Toon op kaart</button>
+          <button id="pdedup" class="btn-sec">Dubbelen opruimen</button>
+          <button id="pcsv" class="btn-sec">CSV ⤓</button>
+        </div>
+        <div class="lctl" id="pbulk" style="display:none">
+          <b id="pselcnt"></b>
+          <select id="bmap"></select>
+          <select id="bown"></select>
+          <select id="bstat"></select>
+          <button id="bdel" class="btn-sec">Verwijderen</button>
+          <button id="bnone" class="btn-ghost">selectie wissen</button>
+        </div>
+        <div class="lwrap">
+          <table id="ptab">
+            <thead><tr>
+              <th class="nosort" style="width:30px"><input type="checkbox" id="pall"></th>
+              <th data-k="adres">Adres</th>
+              <th data-k="eigenaar">Eigenaar</th>
+              <th data-k="map">Map</th>
+              <th data-k="gebruik">Gebruik</th>
+              <th data-k="bestemming">Bestemming</th>
+              <th data-k="status">Status</th>
+              <th data-k="created_at">Toegevoegd</th>
+              <th class="nosort" style="width:30px"></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          <div id="pmore" style="padding:12px 0;text-align:center"></div>
+        </div>
+      </section>
+    </div>
 
     <div id="lijst" hidden>
       <div class="lbar">
@@ -492,8 +558,8 @@ async function openPerceel(p,layer){
   <button>Bewaar als lead</button>`;
  el.querySelector('button').addEventListener('click',async e=>{
   e.target.disabled=true;e.target.textContent='Bewaren…';
-  await saveLead({adres,pand_id:p.kad||'',gebruik:'(leeg perceel)',bestemming:keywords().join(', '),bouwjaar:null,lat:c.lat,lng:c.lng});
-  e.target.textContent='Bewaard ✓';
+  const res=await saveLead({adres,pand_id:p.kad||'',gebruik:'(leeg perceel)',bestemming:keywords().join(', '),bouwjaar:null,lat:c.lat,lng:c.lng});
+  e.target.textContent=saveLbl(res);
  });
  L.popup({maxWidth:280}).setLatLng(c).setContent(el).openOn(map);
 }
@@ -633,9 +699,9 @@ async function openPand(r){
  const btn=el.querySelector('button');
  btn.addEventListener('click',async()=>{
   btn.disabled=true;btn.textContent='Bewaren…';
-  await saveLead({adres,pand_id:String(r.props.identificatie||''),gebruik:r.gebruik.join(', '),
+  const res=await saveLead({adres,pand_id:String(r.props.identificatie||''),gebruik:r.gebruik.join(', '),
    bestemming:besTekst,bouwjaar:r.props.bouwjaar||null,lat:r.center[1],lng:r.center[0]});
-  btn.textContent='Bewaard ✓';
+  btn.textContent=saveLbl(res);
  });
  L.popup({maxWidth:280}).setLatLng([r.center[1],r.center[0]]).setContent(el).openOn(map);
 }
@@ -953,14 +1019,23 @@ function openLijstRij(r){
   <div class="verdict ${r.hit?'hit-v':'no-v'}">${r.hit?'⌖ Raak — gebruik wijkt af van bestemming':'Geen treffer met huidige filters'}</div>
   <button>Bewaar als lead</button>`;
  const b=el.querySelector('button');
- b.addEventListener('click',async()=>{b.disabled=true;b.textContent='Bewaren…';await saveLead(rowLead(r));b.textContent='Bewaard ✓';});
+ b.addEventListener('click',async()=>{b.disabled=true;b.textContent='Bewaren…';const res=await saveLead(rowLead(r));b.textContent=saveLbl(res);});
  setTimeout(()=>L.popup({maxWidth:290}).setLatLng([r.lat,r.lng]).setContent(el).openOn(map),350);
+}
+/* dubbel = zelfde pand-id óf zelfde adres in dezelfde map */
+const normAdr=a=>(a||'').replace(/\s*\(\+\d+\)/g,'').toLowerCase().replace(/[\s,.\-]+/g,'');
+function mapIndex(mapNaam,bron){
+ const pid=new Set(), adr=new Set();
+ (bron||window._leads||[]).forEach(l=>{ if(heeftMap&&(l.map||'')!==(mapNaam||''))return; if(l.pand_id)pid.add(String(l.pand_id)); const a=normAdr(l.adres); if(a)adr.add(a); });
+ return {pid,adr,has(l){return (l.pand_id&&pid.has(String(l.pand_id)))||(normAdr(l.adres)&&adr.has(normAdr(l.adres)));},add(l){if(l.pand_id)pid.add(String(l.pand_id));const a=normAdr(l.adres);if(a)adr.add(a);}};
 }
 document.getElementById('lpijp').addEventListener('click',async()=>{
  if(!sb){alert('Supabase niet geconfigureerd op de server.');return;}
  const pick=lSel.size?lRows.filter(r=>lSel.has(r.key)):lRows;
- const have=new Set((window._leads||[]).filter(l=>!heeftMap||(l.map||'')===(doelMap||'')).map(l=>String(l.pand_id)));   /* dubbel = al in dezelfde map */
- const nieuw=pick.filter(r=>!have.has(String(r.key)));
+ await loadLeads();   /* actuele stand, ook wat collega's net hebben toegevoegd */
+ const idx=mapIndex(doelMap);
+ const nieuw=[];
+ pick.forEach(r=>{const l=rowLead(r); if(idx.has(l))return; idx.add(l); nieuw.push(r);});   /* ook dubbelen binnen de selectie zelf */
  if(!nieuw.length){alert(heeftMap&&doelMap?`Alles staat al in map "${doelMap}".`:'Alles staat al in de pijplijn.');return;}
  if(!confirm(`${nieuw.length} lead(s) naar de pijplijn${heeftEigenaar?' van '+ikBen:''}${heeftMap&&doelMap?` (map "${doelMap}")`:''}${pick.length-nieuw.length?` (${pick.length-nieuw.length} al aanwezig, overgeslagen)`:''}?`))return;
  for(let i=0;i<nieuw.length;i+=500){
@@ -992,8 +1067,10 @@ document.getElementById('lmap').addEventListener('click',()=>{
 function showView(v){
  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
  document.getElementById('lijst').hidden=v!=='lijst';
+ document.getElementById('pijp').hidden=v!=='pijp';
  if(v==='kaart')setTimeout(()=>map.invalidateSize(),50);
- else renderLijst();
+ else if(v==='lijst')renderLijst();
+ else renderPijp();
 }
 document.querySelectorAll('#tabs button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.v)));
 
@@ -1049,14 +1126,22 @@ async function initSupabase(){
  }catch(e){setStatus('Config laden mislukt: '+e.message);}
 }
 async function saveLead(l){
- if(!sb){alert('Supabase niet geconfigureerd op de server.');return;}
+ if(!sb){alert('Supabase niet geconfigureerd op de server.');return 'err';}
+ if(mapIndex(doelMap).has(l))return 'dup';
  const {error}=await sb.from('leads').insert([metEigenaar({...l,status:'te benaderen'})]);
- if(error){alert('Opslaan mislukt: '+error.message);return;}
+ if(error){alert('Opslaan mislukt: '+error.message);return 'err';}
  await loadLeads();
+ return 'ok';
 }
+const saveLbl=r=>r==='dup'?`Staat al in ${doelMap?'map "'+doelMap+'"':'de pijplijn'}`:r==='ok'?'Bewaard ✓':'Niet bewaard';
 async function loadLeads(){
  if(!sb)return;
- const {data,error}=await sb.from('leads').select('*').order('created_at',{ascending:false});
+ let data=[], error=null;
+ for(let from=0;;from+=1000){
+  const r=await sb.from('leads').select('*').order('created_at',{ascending:false}).order('id',{ascending:false}).range(from,from+999);
+  if(r.error){error=r.error;break;}
+  data.push(...(r.data||[])); if(!r.data||r.data.length<1000)break;
+ }
  if(error){setStatus('Leads laden: '+error.message);return;}
  const has=k=>(data||[]).length?Object.prototype.hasOwnProperty.call(data[0],k):null;
  heeftEigenaar=has('eigenaar'); if(heeftEigenaar===null){const t=await sb.from('leads').select('eigenaar').limit(1);heeftEigenaar=!t.error;}
@@ -1084,6 +1169,8 @@ function renderLeads(all){
  renderDoelMap();
  const rows=inPerson.filter(l=>pMap==='__all'||(pMap==='__none'?!l.map:l.map===pMap));
  window._leadsView=rows;
+ document.getElementById('pijpcnt').textContent=all.length?`(${all.length.toLocaleString('nl')})`:'';
+ if(!document.getElementById('pijp').hidden)renderPijp();
  document.getElementById('leadcount').textContent=rows.length;
  document.getElementById('export').style.display=rows.length?'inline':'none';
  const list=document.getElementById('leadlist');
@@ -1104,12 +1191,144 @@ function renderLeads(all){
   const ow=el.querySelector('.ow');
   const mp=el.querySelector('.mp');
   if(mp)mp.addEventListener('change',async e=>{let v=e.target.value;if(v==='__new'){v=nieuweMap();if(v==null){e.target.value=l.map||'';return;}}
+   if(mapIndex(v).has(l)){alert(`Staat al in ${v?'map "'+v+'"':'"zonder map"'}.`);e.target.value=l.map||'';return;}
    const {error}=await sb.from('leads').update({map:v||null}).eq('id',l.id);if(error){alert('Mislukt: '+error.message);return;}l.map=v||null;renderLeads(window._leads);});
   if(ow)ow.addEventListener('change',async e=>{const v=e.target.value||null;const {error}=await sb.from('leads').update({eigenaar:v}).eq('id',l.id);if(error){alert('Mislukt: '+error.message);return;}l.eigenaar=v;renderLeads(window._leads);});
   el.querySelector('.del').addEventListener('click',async()=>{if(confirm('Lead verwijderen?')){await sb.from('leads').delete().eq('id',l.id);loadLeads();}});
   list.appendChild(el);
  });
 }
+/* ===== Pijplijn op groot scherm ===== */
+let pSort={k:'created_at',dir:-1}, pShown=300, pSel=new Set(), pRows=[], pLayer=null;
+const fmtDatum=d=>d?new Date(d).toLocaleDateString('nl',{day:'numeric',month:'short',year:'2-digit'}):'';
+document.getElementById('pstatus').innerHTML=['<option value="">Alle statussen</option>',...STATUSES.map(s=>`<option>${s}</option>`)].join('');
+function pInTab(l){return pTab==='Alle'||!heeftEigenaar||(pTab==='Niet toegewezen'?!PERSONEN.includes(l.eigenaar):l.eigenaar===pTab);}
+function pInMap(l){return pMap==='__all'||(pMap==='__none'?!l.map:l.map===pMap);}
+function renderPijp(){
+ const all=window._leads||[];
+ const mappen=alleMappen();
+ if(pMap!=='__all'&&pMap!=='__none'&&!mappen.includes(pMap))pMap='__all';
+ const persoon=all.filter(pInTab);
+ /* mappenlijst */
+ const item=(v,naam,n,cls='')=>`<div class="pmapitem ${cls} ${pMap===v?'on':''}" data-v="${esc(v)}"><span>${esc(naam)}</span><span class="c">${n.toLocaleString('nl')}</span></div>`;
+ document.getElementById('pmaplist').innerHTML=item('__all','Alle leads',persoon.length,'sub')+
+  mappen.map(m=>item(m,m,persoon.filter(l=>l.map===m).length)).join('')+
+  item('__none','Zonder map',persoon.filter(l=>!l.map).length,'sub');
+ document.querySelectorAll('#pmaplist .pmapitem').forEach(el=>el.addEventListener('click',()=>{pMap=el.dataset.v;lsSet('br_pmap',pMap);pSel.clear();pShown=300;
+  if(!pMap.startsWith('__')){doelMap=pMap;lsSet('br_doelmap',doelMap);}   /* geopende map = map waar nieuwe leads in gaan */
+  renderLeads(all);}));
+ /* persoon-tabs */
+ const tabs=heeftEigenaar?[...PERSONEN,'Niet toegewezen','Alle']:['Alle'];
+ const inM=all.filter(pInMap);
+ document.getElementById('ptabs2').innerHTML=tabs.map(t=>{const n=inM.filter(l=>t==='Alle'||(t==='Niet toegewezen'?!PERSONEN.includes(l.eigenaar):l.eigenaar===t)).length;
+  return (t==='Niet toegewezen'&&!n)?'':`<button data-t="${esc(t)}" class="${t===pTab?'on':''}">${esc(t)} <span class="c">${n}</span></button>`;}).join('');
+ document.querySelectorAll('#ptabs2 button').forEach(b=>b.addEventListener('click',()=>{pTab=b.dataset.t;lsSet('br_ptab',pTab);pSel.clear();renderLeads(all);}));
+ /* rijen */
+ const q=document.getElementById('pzoek').value.trim().toLowerCase(), st=document.getElementById('pstatus').value;
+ let rows=all.filter(l=>pInTab(l)&&pInMap(l)&&(!st||l.status===st)&&(!q||`${l.adres} ${l.gebruik} ${l.bestemming} ${l.eigenaar||''} ${l.map||''}`.toLowerCase().includes(q)));
+ const {k,dir}=pSort;
+ rows.sort((a,b)=>dir*String(a[k]??'').localeCompare(String(b[k]??''),'nl',{numeric:true}));
+ pRows=rows;
+ const titel=pMap==='__all'?'Alle leads':pMap==='__none'?'Zonder map':pMap;
+ document.getElementById('ptitle').textContent=titel;
+ const perStatus=STATUSES.map(s=>[s,rows.filter(l=>l.status===s).length]).filter(x=>x[1]);
+ document.getElementById('pmeta').textContent=`${rows.length.toLocaleString('nl')} lead(s)${pTab!=='Alle'&&heeftEigenaar?' · '+pTab:''}${perStatus.length?' · '+perStatus.map(([s,n])=>`${n} ${s}`).join(' · '):''}${!pMap.startsWith('__')?' · nieuwe leads gaan in deze map':''}`;
+ document.querySelectorAll('#ptab th[data-k]').forEach(th=>{const base=th.textContent.replace(/[ ▲▼]+$/,'');th.innerHTML=esc(base)+(th.dataset.k===k?` <span class="arr">${dir>0?'▲':'▼'}</span>`:'');});
+ const own=l=>heeftEigenaar?`<select class="ow">${['',...PERSONEN].map(p=>`<option value="${p}" ${p===(l.eigenaar||'')?'selected':''}>${p||'—'}</option>`).join('')}</select>`:'';
+ const mp=l=>heeftMap?`<select class="mp">${mapOpts(l.map||'','—')}</select>`:'';
+ document.querySelector('#ptab tbody').innerHTML=rows.slice(0,pShown).map((l,i)=>`<tr data-i="${i}">
+  <td><input type="checkbox" class="rsel" ${pSel.has(l.id)?'checked':''}></td>
+  <td class="adr">${esc(l.adres||'—')}</td>
+  <td>${own(l)}</td><td>${mp(l)}</td>
+  <td class="sm">${esc(l.gebruik||'')}</td>
+  <td>${esc(l.bestemming||'')}</td>
+  <td><select class="st">${STATUSES.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select></td>
+  <td class="sm">${fmtDatum(l.created_at)}</td>
+  <td class="del" title="Verwijderen">×</td></tr>`).join('')||`<tr><td colspan="9" class="empty" style="padding:18px">Geen leads${pMap!=='__all'?' in deze map':''}.</td></tr>`;
+ document.getElementById('pmore').innerHTML=rows.length>pShown?`<button class="btn-sec" id="pmoreBtn">Toon meer (${(rows.length-pShown).toLocaleString('nl')} resterend)</button>`:'';
+ const mb=document.getElementById('pmoreBtn'); if(mb)mb.onclick=()=>{pShown+=500;renderPijp();};
+ document.getElementById('pall').checked=rows.length>0&&rows.every(l=>pSel.has(l.id));
+ renderBulk();
+}
+function renderBulk(){
+ const n=pSel.size, el=document.getElementById('pbulk');
+ el.style.display=n?'flex':'none'; if(!n)return;
+ document.getElementById('pselcnt').textContent=`${n} geselecteerd:`;
+ document.getElementById('bmap').innerHTML=heeftMap?`<option value="__x">Verplaats naar map…</option><option value="">— geen map</option>${alleMappen().map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}<option value="__new">＋ Nieuwe map…</option>`:'';
+ document.getElementById('bmap').style.display=heeftMap?'':'none';
+ document.getElementById('bown').innerHTML=heeftEigenaar?`<option value="__x">Eigenaar…</option>${PERSONEN.map(p=>`<option>${p}</option>`).join('')}<option value="">— niemand</option>`:'';
+ document.getElementById('bown').style.display=heeftEigenaar?'':'none';
+ document.getElementById('bstat').innerHTML=`<option value="__x">Status…</option>${STATUSES.map(s=>`<option>${s}</option>`).join('')}`;
+}
+async function bulkUpdate(ids,patch){
+ for(let i=0;i<ids.length;i+=200){const {error}=await sb.from('leads').update(patch).in('id',ids.slice(i,i+200));if(error){alert('Mislukt: '+error.message);return false;}}
+ return true;
+}
+async function bulkDelete(ids){
+ for(let i=0;i<ids.length;i+=200){const {error}=await sb.from('leads').delete().in('id',ids.slice(i,i+200));if(error){alert('Mislukt: '+error.message);return false;}}
+ return true;
+}
+const byId=id=>(window._leads||[]).find(l=>l.id===id);
+document.querySelector('#ptab thead').addEventListener('click',e=>{const th=e.target.closest('th[data-k]');if(!th)return;pSort=pSort.k===th.dataset.k?{k:pSort.k,dir:-pSort.dir}:{k:th.dataset.k,dir:1};renderPijp();});
+document.getElementById('pall').addEventListener('change',e=>{pRows.forEach(l=>e.target.checked?pSel.add(l.id):pSel.delete(l.id));renderPijp();});
+document.getElementById('bnone').addEventListener('click',()=>{pSel.clear();renderPijp();});
+let pzT;document.getElementById('pzoek').addEventListener('input',()=>{clearTimeout(pzT);pzT=setTimeout(()=>{pShown=300;renderPijp();},200);});
+document.getElementById('pstatus').addEventListener('change',()=>{pShown=300;renderPijp();});
+document.getElementById('pnewmap').addEventListener('click',()=>{const n=nieuweMap();if(!n)return;pMap=n;doelMap=n;lsSet('br_pmap',pMap);lsSet('br_doelmap',doelMap);renderLeads(window._leads||[]);});
+const tbodyP=document.querySelector('#ptab tbody');
+tbodyP.addEventListener('click',async e=>{
+ const tr=e.target.closest('tr[data-i]');if(!tr)return;const l=pRows[+tr.dataset.i];if(!l)return;
+ if(e.target.classList.contains('rsel')){e.target.checked?pSel.add(l.id):pSel.delete(l.id);renderBulk();return;}
+ if(e.target.closest('td.del')){if(!confirm(`"${l.adres}" verwijderen?`))return;await bulkDelete([l.id]);await loadLeads();return;}
+ if(e.target.closest('td.adr')&&l.lat){showView('kaart');map.setView([l.lat,l.lng],19);}
+});
+tbodyP.addEventListener('change',async e=>{
+ const tr=e.target.closest('tr[data-i]');if(!tr)return;const l=pRows[+tr.dataset.i];if(!l)return;
+ if(e.target.classList.contains('st')){if(await bulkUpdate([l.id],{status:e.target.value}))l.status=e.target.value;renderLeads(window._leads);}
+ if(e.target.classList.contains('ow')){const v=e.target.value||null;if(await bulkUpdate([l.id],{eigenaar:v}))l.eigenaar=v;renderLeads(window._leads);}
+ if(e.target.classList.contains('mp')){let v=e.target.value;if(v==='__new'){v=nieuweMap();if(v==null){renderPijp();return;}}
+  if(mapIndex(v).has(l)){alert(`Staat al in ${v?'map "'+v+'"':'"zonder map"'}.`);renderPijp();return;}
+  if(await bulkUpdate([l.id],{map:v||null}))l.map=v||null;renderLeads(window._leads);}
+});
+document.getElementById('bstat').addEventListener('change',async e=>{const v=e.target.value;if(v==='__x')return;await bulkUpdate([...pSel],{status:v});await loadLeads();});
+document.getElementById('bown').addEventListener('change',async e=>{const v=e.target.value;if(v==='__x')return;await bulkUpdate([...pSel],{eigenaar:v||null});await loadLeads();});
+document.getElementById('bmap').addEventListener('change',async e=>{
+ let v=e.target.value;if(v==='__x')return;if(v==='__new'){v=nieuweMap();if(v==null){renderBulk();return;}}
+ const idx=mapIndex(v), move=[], skip=[];
+ [...pSel].map(byId).filter(Boolean).forEach(l=>{ if((l.map||'')===(v||''))return; if(idx.has(l))skip.push(l.id); else {idx.add(l);move.push(l.id);} });
+ if(!move.length){alert(`Alles staat al in ${v?'map "'+v+'"':'"zonder map"'}.`);renderBulk();return;}
+ if(!confirm(`${move.length} lead(s) naar ${v?'map "'+v+'"':'"zonder map"'} verplaatsen?${skip.length?`\n${skip.length} staan daar al en blijven waar ze zijn.`:''}`)){renderBulk();return;}
+ await bulkUpdate(move,{map:v||null}); pSel.clear(); await loadLeads();
+});
+document.getElementById('bdel').addEventListener('click',async()=>{const ids=[...pSel];if(!confirm(`${ids.length} lead(s) definitief verwijderen?`))return;await bulkDelete(ids);pSel.clear();await loadLeads();});
+document.getElementById('pdedup').addEventListener('click',async()=>{
+ await loadLeads();
+ const groups=new Map(), weg=[];
+ /* per map: oudste houden, latere dubbelen (zelfde pand-id of adres) weg */
+ [...(window._leads||[])].sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at))).forEach(l=>{
+  if(!pInMap(l))return;
+  const m=heeftMap?(l.map||''):''; if(!groups.has(m))groups.set(m,mapIndex(null,[]));   /* lege index */
+  const g=groups.get(m); if(g.has(l))weg.push(l.id); else g.add(l);
+ });
+ if(!weg.length){alert('Geen dubbelen gevonden.');return;}
+ if(!confirm(`${weg.length} dubbele lead(s) gevonden${pMap==='__all'?' (over alle mappen, per map bekeken)':' in deze map'}. De oudste blijft staan, de rest wordt verwijderd. Doorgaan?`))return;
+ await bulkDelete(weg); await loadLeads();
+});
+document.getElementById('pkaart').addEventListener('click',()=>{
+ if(pLayer){map.removeLayer(pLayer);pLayer=null;}
+ const pts=pRows.filter(l=>l.lat&&l.lng);
+ if(!pts.length)return;
+ pLayer=L.layerGroup(pts.map(l=>L.circleMarker([l.lat,l.lng],{renderer:canvasR,radius:6,weight:2,color:'#2b4a5f',fillColor:'#70899D',fillOpacity:.9})
+  .bindPopup(`<div class="pop"><h3>${esc(l.adres||'—')}</h3><div class="row"><span>Map:</span> ${esc(l.map||'—')}</div><div class="row"><span>Eigenaar:</span> ${esc(l.eigenaar||'—')}</div><div class="row"><span>Status:</span> ${esc(l.status||'')}</div><div class="row"><span>Bestemming:</span> ${esc(l.bestemming||'—')}</div></div>`))).addTo(map);
+ showView('kaart');
+ const b=L.latLngBounds(pts.map(l=>[l.lat,l.lng])); if(b.isValid())setTimeout(()=>map.fitBounds(b,{padding:[30,30],maxZoom:17}),80);
+});
+document.getElementById('pcsv').addEventListener('click',()=>{
+ const rows=[['adres','eigenaar','map','gebruik','bestemming','bouwjaar','status','toegevoegd','lat','lng'],
+  ...pRows.map(l=>[l.adres,l.eigenaar||'',l.map||'',l.gebruik,l.bestemming,l.bouwjaar,l.status,(l.created_at||'').slice(0,10),l.lat,l.lng])];
+ downloadCSV(`pijplijn_${[pTab,pMap.startsWith('__')?'':pMap].filter(Boolean).join('_').replace(/[^\w-]+/g,'_').toLowerCase()}.csv`,rows);
+});
+
 document.getElementById('export').addEventListener('click',()=>{
  const rows=[['adres','eigenaar','map','gebruik','bestemming','bouwjaar','status','lat','lng'],
   ...(window._leadsView||[]).map(l=>[l.adres,l.eigenaar||'',l.map||'',l.gebruik,l.bestemming,l.bouwjaar,l.status,l.lat,l.lng])];
