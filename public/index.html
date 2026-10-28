@@ -54,6 +54,16 @@ button{font-family:inherit;cursor:pointer;border:none;border-radius:9px;font-wei
 .lead select{padding:5px 7px;font-size:12px;flex:1}
 .lead .del{background:none;color:var(--muted);font-size:16px;padding:0 4px}
 .empty{font-size:13px;color:var(--muted);line-height:1.5}
+.ptabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 10px}
+.ptabs button{background:#fff;border:1px solid var(--line);color:var(--muted);font-size:12px;padding:4px 9px;border-radius:14px;font-weight:600}
+.ptabs button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.ptabs .c{font-weight:400;opacity:.75}
+.wie{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin:0 0 10px}
+.wie select{width:auto;padding:5px 8px;font-size:13px}
+.lead .own{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);float:right}
+.lead .own.none{color:var(--muted);font-weight:400}
+.lead .mapchip{display:inline-block;font-size:11px;background:var(--sand);border-radius:10px;padding:1px 8px;margin-top:4px;color:var(--ink)}
+.lead .ctl select.mp{max-width:120px}
 .prog{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:10px;display:none}
 .prog div{height:100%;width:0;background:var(--terra);transition:width .3s}
 #scanStatus{font-size:12px;color:var(--muted);margin-top:7px;min-height:16px;line-height:1.4}
@@ -99,6 +109,7 @@ td.adr{font-weight:600;cursor:pointer}
 td.adr:hover{color:var(--terra)}
 td.num{text-align:right;white-space:nowrap}
 td.sm{color:var(--muted);font-size:12px}
+td a{color:var(--terra)}
 .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:#fbe9e5;color:#a9594c;margin-left:6px;vertical-align:1px}
 .n{font-weight:400;color:var(--muted);font-size:12px}
 #lmore{padding:12px 0;text-align:center}
@@ -163,6 +174,12 @@ td.sm{color:var(--muted);font-size:12px}
     <div class="block" style="flex:1">
       <h2><span>Pijplijn <span id="leadcount" class="hitline" style="font-size:18px">0</span></span>
         <button id="export" class="btn-ghost" style="display:none">CSV ⤓</button></h2>
+      <div class="wie">Ik ben <select id="ikben"></select><span style="font-size:11.5px">— nieuwe leads gaan in jouw pijplijn</span></div>
+      <div class="wie">Opslaan in map <select id="doelmap"></select></div>
+      <div id="ptabs" class="ptabs"></div>
+      <div class="wie">Filter map <select id="pmap"></select></div>
+      <div id="eigwarn" class="warn">Kolom <b>eigenaar</b> ontbreekt in Supabase. Run in de SQL Editor: <code>alter table public.leads add column if not exists eigenaar text;</code></div>
+      <div id="mapwarn" class="warn">Kolom <b>map</b> ontbreekt in Supabase. Run in de SQL Editor: <code>alter table public.leads add column if not exists map text;</code></div>
       <div id="leadlist"><div class="empty">Klik een opgelichte treffer aan en bewaar 'm hier. Leads blijven bewaard in Supabase.</div></div>
     </div>
     <div id="status" class="block" style="border-bottom:none"></div>
@@ -185,10 +202,17 @@ td.sm{color:var(--muted);font-size:12px}
       </div>
       <div class="lctl">
         <input type="text" id="lzoek" placeholder="Filter op adres, plaats, bestemming…">
-        <label><input type="checkbox" id="lhits" checked> Alleen treffers</label>
+        <select id="lfilt" style="width:auto;padding:6px 9px;font-size:13px">
+          <option value="hits">Alleen treffers</option>
+          <option value="alle">Alles</option>
+          <option value="analoog">Alleen PDF-plan (geen digitale vlakken)</option>
+          <option value="geen">Geen plan gevonden</option>
+          <option value="fout">API-fout</option>
+        </select>
         <label><input type="checkbox" id="lpand" checked> Per pand</label>
         <span style="flex:1"></span>
         <button id="lmap" class="btn-sec">Toon op kaart</button>
+        <select id="ldoelmap" title="Map in de pijplijn" style="width:auto;padding:6px 9px;font-size:13px"></select>
         <button id="lpijp" class="btn-sec">Alles → pijplijn</button>
         <button id="lcsv" class="btn-sec">CSV ⤓</button>
       </div>
@@ -305,6 +329,17 @@ async function rpZoekAll(path,body,withGeom,signal){
 const rdPolyBody=(x0,y0,x1,y1)=>({_geo:{intersects:{type:'Polygon',coordinates:[[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]]]}}});
 
 /* plan-metadata: alleen geldende land-use-plannen, nieuwste eerst */
+function onderdeelUrl(p,re){
+ const o=(p.heeftOnderdelen||[]).find(x=>re.test(x.type||'')&&(x.externeReferenties||[]).length);
+ return o?o.externeReferenties[0]:'';
+}
+/* plangrens (RD) 1x per plan ophalen — voor plannen zonder digitale vlakken */
+const planGeomCache=new Map();
+function planGeom(id,signal){
+ if(!planGeomCache.has(id))planGeomCache.set(id,fetchJSON(`/api/rp/plannen/${encodeURIComponent(id)}?expand=geometrie`,{headers:{'Accept-Crs':'epsg:28992'},signal},3)
+  .then(j=>{const g=j&&j.geometrie;if(!g)return null;let bb=null;try{bb=turf.bbox(g);}catch(e){}return {g,bb};}));
+ return planGeomCache.get(id);
+}
 function planMeta(p){
  const id=p.id||p.identificatie;
  const status=((p.planstatusInfo&&p.planstatusInfo.planstatus)||'')+'';
@@ -314,7 +349,8 @@ function planMeta(p){
  return {id,naam:p.naam||id,type:p.type||'',datum,
   paraplu:p.isParapluplan===true||/paraplu|facet|parkeer|archeolog|cultuurhist|geluid|natuurbescherm/i.test(txt),
   landuse:/bestemmingsplan|beheersverordening|inpassingsplan|wijzigingsplan|uitwerkingsplan/i.test(p.type||''),
-  geldig:!/ontwerp|concept|voornemen/i.test(status)&&!/vervallen|afgebroken|niet in werking|voorbereiding/i.test(dstat)};
+  geldig:!/ontwerp|concept|voornemen/i.test(status)&&!/vervallen|afgebroken|niet in werking|voorbereiding/i.test(dstat),
+  kaart:onderdeelUrl(p,/plankaart/i), regels:onderdeelUrl(p,/voorschriften|regels/i), toel:onderdeelUrl(p,/toelichting/i)};
 }
 function eligiblePlans(all){
  const metas=(all||[]).map(planMeta).filter(m=>m.id);
@@ -773,10 +809,11 @@ async function runScan(area){
    const all=await rpZoekAll('plannen',body,false,signal);
    if(!all)rpFail++;
    const metas=eligiblePlans(all||[]);
-   let open=co.slice(); const decisive=new Map(); const hitPl=new Map();
+   let open=co.slice(); const decisive=new Map(); const hitPl=new Map(); const analoog=[]; let bvFail=0;
    for(const m of metas){
     if(!open.length)break;
     const bv=await rpZoekAll(`plannen/${encodeURIComponent(m.id)}/bestemmingsvlakken`,body,true,signal);
+    if(!bv)bvFail++; else if(!bv.length&&/\.pdf/i.test(m.kaart))analoog.push(m);   /* oud plan: alleen PDF-plankaart, geen vlakken */
     const pl={meta:m,bv:(bv||[]).map(prepVlak),fa:null};
     open=open.filter(o=>{const v=findVlak(pl.bv,o.rd); if(v){hitPl.set(o,{v,pl});decisive.set(m.id,pl);return false;} return true;});
    }
@@ -784,7 +821,15 @@ async function runScan(area){
     const fa=await rpZoekAll(`plannen/${encodeURIComponent(pl.meta.id)}/functieaanduidingen`,body,true,signal);
     pl.fa=(fa||[]).map(prepVlak);
    }
-   co.forEach(o=>{const h=hitPl.get(o); o.d=h?{vlak:h.v.naam,aand:aandOp(h.pl,o.rd),plan:h.pl.meta.naam,datum:h.pl.meta.datum}:null;});
+   co.forEach(o=>{const h=hitPl.get(o); o.d=h?{vlak:h.v.naam,aand:aandOp(h.pl,o.rd),plan:h.pl.meta.naam,datum:h.pl.meta.datum}:null; o.r=null;});
+   /* zonder vlak: in welk plan zonder digitale vlakken (alleen PDF) ligt het object? */
+   for(const m of analoog){
+    if(!open.length)break;
+    const pg=await planGeom(m.id,signal); if(!pg)continue;
+    open=open.filter(o=>{ if(inBB(o.rd,pg.bb)&&pip(o.rd,pg.g)){o.r={reden:'analoog',plan:m.naam,datum:m.datum,kaart:m.kaart,regels:m.regels,toel:m.toel,planId:m.id};return false;} return true;});
+   }
+   const rest=(!all||bvFail)?'fout':'geen';
+   open.forEach(o=>{o.r={reden:rest};});
    done++;
    progress(.15+.85*done/cellArr.length);
    const el=(Date.now()-t0)/1000, eta=done>3?Math.round(el/done*(cellArr.length-done)):null;
@@ -819,7 +864,8 @@ function buildRows(){
  const perPand=document.getElementById('lpand').checked;
  const mk=(o,hit)=>({key:o.id,ids:[o.id],adres:o.adres,postcode:o.postcode,plaats:o.plaats,gemeente:o.gemeente,
   gebruik:o.gebruik.join(', '),opp:o.opp,bestemming:o.d?o.d.vlak:'',aand:o.d?(o.d.aand.find(naamMatch)||o.d.aand.join(', ')):'',
-  plan:o.d?o.d.plan:'',datum:o.d?o.d.datum:'',lng:o.lng,lat:o.lat,hit,n:1,status:o.status,heeftPlan:!!o.d,pandKey:o.pand,
+  plan:o.d?o.d.plan:(o.r&&o.r.plan)||'',datum:o.d?o.d.datum:(o.r&&o.r.datum)||'',lng:o.lng,lat:o.lat,hit,n:1,status:o.status,heeftPlan:!!o.d,pandKey:o.pand,
+  reden:o.d?'digitaal':(o.r&&o.r.reden)||'onbekend',kaart:(o.r&&o.r.kaart)||'',regels:(o.r&&o.r.regels)||'',toel:(o.r&&o.r.toel)||'',planId:(o.r&&o.r.planId)||'',
   relevant:o.gebruik.some(g=>selSet.has(g))});
  const base=scanObjs.map(o=>mk(o,kwOn&&isHit(o,selSet))).filter(r=>r.relevant);
  if(!perPand)return base;
@@ -841,19 +887,20 @@ function renderLijst(){
  document.getElementById('tabcnt').textContent=scanObjs.length?`(${scanObjs.length.toLocaleString('nl')})`:'';
  if(!scanObjs.length||!scanMeta)return;
  const all=buildRows();
- const onlyHits=document.getElementById('lhits').checked;
+ const filt=document.getElementById('lfilt').value;
  const q=document.getElementById('lzoek').value.trim().toLowerCase();
- let rows=all.filter(r=>(!onlyHits||r.hit)&&(!q||`${r.adres} ${r.postcode} ${r.plaats} ${r.bestemming} ${r.aand} ${r.plan}`.toLowerCase().includes(q)));
+ let rows=all.filter(r=>(filt==='alle'||(filt==='hits'&&r.hit)||(filt!=='hits'&&r.reden===filt))&&(!q||`${r.adres} ${r.postcode} ${r.plaats} ${r.bestemming} ${r.aand} ${r.plan}`.toLowerCase().includes(q)));
  const {k,dir}=lSort;
  rows.sort((a,b)=>{const x=a[k],y=b[k];
   if(typeof x==='number'||typeof y==='number')return dir*((x??-1)-(y??-1));
   return dir*String(x||'').localeCompare(String(y||''),'nl',{numeric:true});});
  lRows=rows;
- const hits=all.filter(r=>r.hit).length, noPlan=all.filter(r=>!r.heeftPlan).length;
+ const hits=all.filter(r=>r.hit).length, cnt=k=>all.filter(r=>r.reden===k).length;
+ const nA=cnt('analoog'), nG=cnt('geen'), nF=cnt('fout'), nO=cnt('onbekend');
  const unit=document.getElementById('lpand').checked?'panden':'objecten';
  document.getElementById('lmeta').textContent=`${scanMeta.label} · ${scanMeta.funcs.map(f=>fnLabel[f]||f).join(', ')} · gescand ${new Date(scanMeta.datum).toLocaleString('nl',{dateStyle:'short',timeStyle:'short'})}`;
  const extra=selectedFuncs().some(f=>f!=='geen functie'&&!scanMeta.funcs.includes(f))?' · ⚠ nieuw aangevinkte functies zitten niet in deze scan — scan opnieuw':'';
- document.getElementById('lstats').innerHTML=`<b>${all.length.toLocaleString('nl')}</b> ${unit} · <b>${hits.toLocaleString('nl')}</b> treffers op "${esc(keywords().join(', ')||'—')}" · ${noPlan.toLocaleString('nl')} zonder digitale bestemming (oud plan, alleen PDF) · ${rows.length.toLocaleString('nl')} getoond${extra}`;
+ document.getElementById('lstats').innerHTML=`<b>${all.length.toLocaleString('nl')}</b> ${unit} · <b>${hits.toLocaleString('nl')}</b> treffers op "${esc(keywords().join(', ')||'—')}" · zonder digitale bestemming: <b>${nA.toLocaleString('nl')}</b> alleen PDF-plan, ${nG.toLocaleString('nl')} geen plan gevonden${nF?`, <span style="color:var(--terra)">${nF.toLocaleString('nl')} API-fout (scan opnieuw)</span>`:''}${nO?`, ${nO.toLocaleString('nl')} onbekend (oude scan)`:''} · ${rows.length.toLocaleString('nl')} getoond${extra}`;
  document.querySelectorAll('#ltab th[data-k]').forEach(th=>{
   const base=th.textContent.replace(/[ ▲▼]+$/,'');
   th.innerHTML=esc(base)+(th.dataset.k===k?` <span class="arr">${dir>0?'▲':'▼'}</span>`:'');
@@ -868,7 +915,7 @@ function renderLijst(){
   <td class="num">${r.opp!=null?r.opp.toLocaleString('nl'):'—'}</td>
   <td>${esc(r.bestemming||'—')}</td>
   <td class="sm">${esc(r.aand||'')}</td>
-  <td class="sm" title="${esc(r.plan)}">${esc((r.plan||'').slice(0,40))}${r.datum?` · ${esc(r.datum.slice(0,4))}`:''}</td></tr>`).join('');
+  <td class="sm" title="${esc(r.plan)}">${r.reden==='analoog'?'<span class="badge" style="background:#eef2f0;color:#5f7167;margin:0 4px 0 0">PDF</span>':''}${esc((r.plan||'').slice(0,40))}${r.datum?` · ${esc(r.datum.slice(0,4))}`:''}${r.kaart?` · <a href="${esc(r.kaart)}" target="_blank" rel="noopener">kaart</a>`:''}${r.regels?` · <a href="${esc(r.regels)}" target="_blank" rel="noopener">regels</a>`:''}${r.reden==='geen'?'<span style="color:var(--muted)">geen plan gevonden</span>':''}${r.reden==='fout'?'<span style="color:var(--terra)">API-fout</span>':''}</td></tr>`).join('');
  document.getElementById('lmore').innerHTML=rows.length>lShown?`<button class="btn-sec" id="lmoreBtn">Toon meer (${(rows.length-lShown).toLocaleString('nl')} resterend)</button>`:'';
  const mb=document.getElementById('lmoreBtn'); if(mb)mb.onclick=()=>{lShown+=1000;renderLijst();};
  document.getElementById('lpijp').textContent=lSel.size?`Selectie (${lSel.size}) → pijplijn`:'Alles → pijplijn';
@@ -888,7 +935,7 @@ document.querySelector('#ltab tbody').addEventListener('click',e=>{
 document.getElementById('lall').addEventListener('change',e=>{
  lRows.forEach(r=>e.target.checked?lSel.add(r.key):lSel.delete(r.key)); renderLijst();
 });
-['lhits','lpand'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{lShown=500;lSel.clear();document.getElementById('lall').checked=false;renderLijst();}));
+['lfilt','lpand'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{lShown=500;lSel.clear();document.getElementById('lall').checked=false;renderLijst();}));
 let lzTimer; document.getElementById('lzoek').addEventListener('input',()=>{clearTimeout(lzTimer);lzTimer=setTimeout(()=>{lShown=500;renderLijst();},200);});
 
 const rowBestemming=r=>(r.bestemming||'—')+(r.aand&&r.hit&&!naamMatch(r.bestemming)?` · aanduiding: ${r.aand}`:'');
@@ -901,6 +948,7 @@ function openLijstRij(r){
   <div class="row"><span>Gebruik:</span> ${esc(r.gebruik)}</div>
   <div class="row"><span>Bestemming:</span> ${esc(rowBestemming(r))}</div>
   <div class="row"><span>Plan:</span> ${esc(r.plan||'—')}${r.datum?' ('+esc(r.datum.slice(0,10))+')':''}</div>
+  ${r.reden==='analoog'?`<div class="row"><span>Alleen PDF:</span> ${r.kaart?`<a href="${esc(r.kaart)}" target="_blank" rel="noopener">plankaart</a>`:''}${r.regels?` · <a href="${esc(r.regels)}" target="_blank" rel="noopener">voorschriften</a>`:''}</div>`:''}
   <div class="row"><span>Opp.:</span> ${r.opp!=null?r.opp+' m²':'—'}</div>
   <div class="verdict ${r.hit?'hit-v':'no-v'}">${r.hit?'⌖ Raak — gebruik wijkt af van bestemming':'Geen treffer met huidige filters'}</div>
   <button>Bewaar als lead</button>`;
@@ -911,19 +959,19 @@ function openLijstRij(r){
 document.getElementById('lpijp').addEventListener('click',async()=>{
  if(!sb){alert('Supabase niet geconfigureerd op de server.');return;}
  const pick=lSel.size?lRows.filter(r=>lSel.has(r.key)):lRows;
- const have=new Set((window._leads||[]).map(l=>String(l.pand_id)));
+ const have=new Set((window._leads||[]).filter(l=>!heeftMap||(l.map||'')===(doelMap||'')).map(l=>String(l.pand_id)));   /* dubbel = al in dezelfde map */
  const nieuw=pick.filter(r=>!have.has(String(r.key)));
- if(!nieuw.length){alert('Alles staat al in de pijplijn.');return;}
- if(!confirm(`${nieuw.length} lead(s) naar de pijplijn${pick.length-nieuw.length?` (${pick.length-nieuw.length} al aanwezig, overgeslagen)`:''}?`))return;
+ if(!nieuw.length){alert(heeftMap&&doelMap?`Alles staat al in map "${doelMap}".`:'Alles staat al in de pijplijn.');return;}
+ if(!confirm(`${nieuw.length} lead(s) naar de pijplijn${heeftEigenaar?' van '+ikBen:''}${heeftMap&&doelMap?` (map "${doelMap}")`:''}${pick.length-nieuw.length?` (${pick.length-nieuw.length} al aanwezig, overgeslagen)`:''}?`))return;
  for(let i=0;i<nieuw.length;i+=500){
-  const {error}=await sb.from('leads').insert(nieuw.slice(i,i+500).map(rowLead));
+  const {error}=await sb.from('leads').insert(nieuw.slice(i,i+500).map(r=>metEigenaar(rowLead(r))));
   if(error){alert('Mislukt: '+error.message);break;}
  }
  lSel.clear(); await loadLeads(); renderLijst();
 });
 document.getElementById('lcsv').addEventListener('click',()=>{
- const rows=[['adres','objecten','postcode','plaats','gemeente','gebruik','m2','bestemming','aanduiding','plan','plandatum','treffer','lat','lng'],
-  ...lRows.map(r=>[r.adres,r.n,r.postcode,r.plaats,r.gemeente,r.gebruik,r.opp,r.bestemming,r.aand,r.plan,(r.datum||'').slice(0,10),r.hit?'ja':'nee',r.lat,r.lng])];
+ const rows=[['adres','objecten','postcode','plaats','gemeente','gebruik','m2','bestemming','aanduiding','plan','plandatum','treffer','reden','plan_id','plankaart_pdf','voorschriften_pdf','toelichting_pdf','lat','lng'],
+  ...lRows.map(r=>[r.adres,r.n,r.postcode,r.plaats,r.gemeente,r.gebruik,r.opp,r.bestemming,r.aand,r.plan,(r.datum||'').slice(0,10),r.hit?'ja':'nee',r.reden,r.planId,r.kaart,r.regels,r.toel,r.lat,r.lng])];
  downloadCSV(`bestemmingsradar_${(scanMeta&&scanMeta.label||'lijst').replace(/[^\w-]+/g,'_')}.csv`,rows);
 });
 const canvasR=L.canvas({padding:.3});
@@ -957,6 +1005,37 @@ function downloadCSV(filename,rows){
 
 /* ---------- Supabase leadpijplijn ---------- */
 let sb=null;
+const PERSONEN=['Milan','Felix','Pepijn'];
+const lsGet=(k,d)=>{try{return localStorage.getItem(k)??d;}catch(e){return d;}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
+let ikBen=lsGet('br_ikben','Milan'); if(!PERSONEN.includes(ikBen))ikBen='Milan';
+let pTab=lsGet('br_ptab',ikBen);
+let heeftEigenaar=true, heeftMap=true;
+let doelMap=lsGet('br_doelmap',''), pMap=lsGet('br_pmap','__all');
+let extraMappen=[]; try{extraMappen=JSON.parse(lsGet('br_mappen','[]'))||[];}catch(e){}
+function alleMappen(){
+ const m=new Set(extraMappen);(window._leads||[]).forEach(l=>{if(l.map)m.add(l.map);});
+ return [...m].sort((a,b)=>a.localeCompare(b,'nl'));
+}
+function nieuweMap(){
+ const n=(prompt('Naam van de nieuwe map (bv. "Kamerverhuur Rotterdam"):')||'').trim();
+ if(!n)return null;
+ if(!extraMappen.includes(n)){extraMappen.push(n);lsSet('br_mappen',JSON.stringify(extraMappen));}
+ return n;
+}
+const mapOpts=(sel,leeg)=>[`<option value="">${leeg}</option>`,...alleMappen().map(m=>`<option value="${esc(m)}" ${m===sel?'selected':''}>${esc(m)}</option>`),'<option value="__new">＋ Nieuwe map…</option>'].join('');
+function renderDoelMap(){
+ if(doelMap&&!alleMappen().includes(doelMap))doelMap='';
+ ['doelmap','ldoelmap'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.innerHTML=mapOpts(doelMap,id==='ldoelmap'?'→ geen map':'Geen map');el.value=doelMap;el.disabled=!heeftMap;});
+}
+['doelmap','ldoelmap'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{
+ let v=e.target.value; if(v==='__new'){v=nieuweMap()??doelMap;}
+ doelMap=v; lsSet('br_doelmap',doelMap); renderDoelMap(); renderLeads(window._leads||[]);
+}));
+document.getElementById('pmap').addEventListener('change',e=>{pMap=e.target.value;lsSet('br_pmap',pMap);renderLeads(window._leads||[]);});
+(()=>{const s=document.getElementById('ikben');s.innerHTML=PERSONEN.map(p=>`<option ${p===ikBen?'selected':''}>${p}</option>`).join('');
+ s.addEventListener('change',e=>{ikBen=e.target.value;lsSet('br_ikben',ikBen);pTab=ikBen;lsSet('br_ptab',pTab);renderLeads(window._leads||[]);});})();
+const metEigenaar=l=>{const o={...l};if(heeftEigenaar)o.eigenaar=l.eigenaar||ikBen;if(heeftMap&&doelMap&&!o.map)o.map=doelMap;return o;};
 const STATUSES=['te benaderen','benaderd','in gesprek','afgewezen','gewonnen'];
 async function initSupabase(){
  try{
@@ -971,7 +1050,7 @@ async function initSupabase(){
 }
 async function saveLead(l){
  if(!sb){alert('Supabase niet geconfigureerd op de server.');return;}
- const {error}=await sb.from('leads').insert([{...l,status:'te benaderen'}]);
+ const {error}=await sb.from('leads').insert([metEigenaar({...l,status:'te benaderen'})]);
  if(error){alert('Opslaan mislukt: '+error.message);return;}
  await loadLeads();
 }
@@ -979,32 +1058,62 @@ async function loadLeads(){
  if(!sb)return;
  const {data,error}=await sb.from('leads').select('*').order('created_at',{ascending:false});
  if(error){setStatus('Leads laden: '+error.message);return;}
+ const has=k=>(data||[]).length?Object.prototype.hasOwnProperty.call(data[0],k):null;
+ heeftEigenaar=has('eigenaar'); if(heeftEigenaar===null){const t=await sb.from('leads').select('eigenaar').limit(1);heeftEigenaar=!t.error;}
+ heeftMap=has('map'); if(heeftMap===null){const t=await sb.from('leads').select('map').limit(1);heeftMap=!t.error;}
+ document.getElementById('eigwarn').style.display=heeftEigenaar?'none':'block';
+ document.getElementById('mapwarn').style.display=heeftMap?'none':'block';
  renderLeads(data||[]);
 }
-function renderLeads(rows){
+function renderLeads(all){
+ window._leads=all;
+ const tabs=heeftEigenaar?[...PERSONEN,'Niet toegewezen','Alle']:['Alle'];
+ if(!tabs.includes(pTab))pTab=tabs[0];
+ const inTab=(l,t)=>t==='Alle'||(t==='Niet toegewezen'?!PERSONEN.includes(l.eigenaar):l.eigenaar===t);
+ const pt=document.getElementById('ptabs');
+ pt.innerHTML=tabs.map(t=>{const n=all.filter(l=>inTab(l,t)).length;return (t==='Niet toegewezen'&&!n)?'':`<button data-t="${esc(t)}" class="${t===pTab?'on':''}">${esc(t)} <span class="c">${n}</span></button>`;}).join('');
+ pt.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{pTab=b.dataset.t;lsSet('br_ptab',pTab);renderLeads(all);}));
+ const inPerson=all.filter(l=>inTab(l,pTab));
+ const mappen=alleMappen();
+ if(pMap!=='__all'&&pMap!=='__none'&&!mappen.includes(pMap))pMap='__all';
+ const pm=document.getElementById('pmap');
+ pm.innerHTML=[`<option value="__all">Alle mappen (${inPerson.length})</option>`,
+  ...mappen.map(m=>`<option value="${esc(m)}">${esc(m)} (${inPerson.filter(l=>l.map===m).length})</option>`),
+  `<option value="__none">Zonder map (${inPerson.filter(l=>!l.map).length})</option>`].join('');
+ pm.value=pMap; pm.disabled=!heeftMap;
+ renderDoelMap();
+ const rows=inPerson.filter(l=>pMap==='__all'||(pMap==='__none'?!l.map:l.map===pMap));
+ window._leadsView=rows;
  document.getElementById('leadcount').textContent=rows.length;
  document.getElementById('export').style.display=rows.length?'inline':'none';
- window._leads=rows;
  const list=document.getElementById('leadlist');
- if(!rows.length){list.innerHTML='<div class="empty">Nog geen leads bewaard.</div>';return;}
+ if(!rows.length){list.innerHTML=`<div class="empty">${all.length?`Geen leads in de pijplijn van ${esc(pTab)}${pMap!=='__all'?' in deze map':''}.`:'Nog geen leads bewaard.'}</div>`;return;}
  list.innerHTML='';
  rows.forEach(l=>{
   const el=document.createElement('div');el.className='lead';
-  el.innerHTML=`<div class="adr">${esc(l.adres||'—')}</div>
+  el.innerHTML=`${heeftEigenaar&&pTab==='Alle'?`<span class="own ${l.eigenaar?'':'none'}">${esc(l.eigenaar||'—')}</span>`:''}<div class="adr">${esc(l.adres||'—')}</div>
    <div class="meta">Gebruik: <b>${esc(l.gebruik||'—')}</b></div>
    <div class="meta">Bestemming: <b>${esc(l.bestemming||'—')}</b>${l.bouwjaar?` · ${esc(l.bouwjaar)}`:''}</div>
-   <div class="ctl"><select>${STATUSES.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>
+   ${l.map&&pMap==='__all'?`<span class="mapchip">${esc(l.map)}</span>`:''}
+   <div class="ctl"><select class="st">${STATUSES.map(s=>`<option ${s===l.status?'selected':''}>${s}</option>`).join('')}</select>
+    ${heeftEigenaar?`<select class="ow" title="Eigenaar">${['',...PERSONEN].map(p=>`<option value="${p}" ${p===(l.eigenaar||'')?'selected':''}>${p||'— niemand'}</option>`).join('')}</select>`:''}
+    ${heeftMap?`<select class="mp" title="Map">${mapOpts(l.map||'','— geen map')}</select>`:''}
     <button class="del" title="Verwijder">×</button></div>`;
   el.querySelector('.adr').addEventListener('click',()=>{showView('kaart');map.setView([l.lat,l.lng],19);});
-  el.querySelector('select').addEventListener('change',async e=>{await sb.from('leads').update({status:e.target.value}).eq('id',l.id);});
+  el.querySelector('.st').addEventListener('change',async e=>{await sb.from('leads').update({status:e.target.value}).eq('id',l.id);l.status=e.target.value;});
+  const ow=el.querySelector('.ow');
+  const mp=el.querySelector('.mp');
+  if(mp)mp.addEventListener('change',async e=>{let v=e.target.value;if(v==='__new'){v=nieuweMap();if(v==null){e.target.value=l.map||'';return;}}
+   const {error}=await sb.from('leads').update({map:v||null}).eq('id',l.id);if(error){alert('Mislukt: '+error.message);return;}l.map=v||null;renderLeads(window._leads);});
+  if(ow)ow.addEventListener('change',async e=>{const v=e.target.value||null;const {error}=await sb.from('leads').update({eigenaar:v}).eq('id',l.id);if(error){alert('Mislukt: '+error.message);return;}l.eigenaar=v;renderLeads(window._leads);});
   el.querySelector('.del').addEventListener('click',async()=>{if(confirm('Lead verwijderen?')){await sb.from('leads').delete().eq('id',l.id);loadLeads();}});
   list.appendChild(el);
  });
 }
 document.getElementById('export').addEventListener('click',()=>{
- const rows=[['adres','gebruik','bestemming','bouwjaar','status','lat','lng'],
-  ...(window._leads||[]).map(l=>[l.adres,l.gebruik,l.bestemming,l.bouwjaar,l.status,l.lat,l.lng])];
- downloadCSV('bestemmingsradar_leads.csv',rows);
+ const rows=[['adres','eigenaar','map','gebruik','bestemming','bouwjaar','status','lat','lng'],
+  ...(window._leadsView||[]).map(l=>[l.adres,l.eigenaar||'',l.map||'',l.gebruik,l.bestemming,l.bouwjaar,l.status,l.lat,l.lng])];
+ downloadCSV(`bestemmingsradar_leads_${[pTab,pMap.startsWith('__')?'':pMap].filter(Boolean).join('_').replace(/[^\w-]+/g,'_').toLowerCase()}.csv`,rows);
 });
 
 /* ---------- toggles ---------- */
